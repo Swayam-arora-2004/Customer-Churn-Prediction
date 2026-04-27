@@ -18,7 +18,7 @@ import json
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 import numpy as np
 import pandas as pd
@@ -31,6 +31,7 @@ _PSI_BINS = 10  # Number of bins for PSI calculation
 
 
 # ── PSI Utilities ─────────────────────────────────────────────────────────────
+
 
 def _compute_psi(
     reference: np.ndarray,
@@ -135,7 +136,8 @@ class DataDriftDetector:
             }
 
         common_cols = [
-            c for c in current_df.columns
+            c
+            for c in current_df.columns
             if c in self._reference.columns
             and pd.api.types.is_numeric_dtype(current_df[c])
         ]

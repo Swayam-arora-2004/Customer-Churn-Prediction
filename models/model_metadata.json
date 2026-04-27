@@ -1,0 +1,11 @@
+{
+  "model_name": "xgboost",
+  "model_class": "XGBClassifier",
+  "feature_count": 26,
+  "test_roc_auc": 0.8315936982793617,
+  "test_f1": 0.6248715313463515,
+  "test_precision": 0.5058236272878536,
+  "test_recall": 0.8172043010752689,
+  "trained_at": "2026-04-27T13:39:18.362458+00:00",
+  "use_smote": true
+}

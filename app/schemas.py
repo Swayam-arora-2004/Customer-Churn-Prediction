@@ -7,7 +7,7 @@ All models are strictly typed and validated at request time.
 ─────────────────────────────────────────────────────────────────────────────
 """
 
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, List, Literal, Optional
 from pydantic import BaseModel, Field, field_validator
 
 
@@ -46,7 +46,7 @@ class CustomerFeatures(BaseModel):
     @classmethod
     def total_charges_consistent(cls, v: float, info: Any) -> float:
         tenure = info.data.get("tenure", 0)
-        monthly = info.data.get("MonthlyCharges", 0)
+        info.data.get("MonthlyCharges", 0)
         if tenure == 0 and v != 0.0:
             return 0.0  # auto-correct, don't reject
         return v
@@ -60,9 +60,7 @@ class PredictRequest(BaseModel):
 
 
 class BatchPredictRequest(BaseModel):
-    customers: List[PredictRequest] = Field(
-        ..., min_length=1, max_length=1000
-    )
+    customers: List[PredictRequest] = Field(..., min_length=1, max_length=1000)
 
 
 # ── Response Models ───────────────────────────────────────────────────────────
@@ -90,7 +88,7 @@ class PredictionResult(BaseModel):
     churn_probability: float
     will_churn: bool
     risk_segment: str
-    confidence: str   # "high" | "medium" | "low" based on probability distance from 0.5
+    confidence: str  # "high" | "medium" | "low" based on probability distance from 0.5
 
 
 class ExplanationResult(BaseModel):
@@ -134,6 +132,7 @@ class MetricsResponse(BaseModel):
 
 class APIResponse(BaseModel):
     """Standard JSON envelope for all API responses."""
+
     status: Literal["success", "error"]
     data: Optional[Any] = None
     error: Optional[str] = None

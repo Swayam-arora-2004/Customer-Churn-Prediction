@@ -17,9 +17,10 @@ Supported model types:
 
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
@@ -181,8 +182,9 @@ class SHAPExplainer:
             show=False,
             plot_type="dot",
         )
-        plt.title("SHAP Feature Importance — Global Summary", fontsize=14,
-                  fontweight="bold")
+        plt.title(
+            "SHAP Feature Importance — Global Summary", fontsize=14, fontweight="bold"
+        )
         plt.tight_layout()
 
         if save:
@@ -234,29 +236,32 @@ class SHAPExplainer:
         plt.show()
         return None
 
+
 # ── Entry point ───────────────────────────────────────────────────────────────
+
 
 def generate_shap_plots():
     logging.basicConfig(level=logging.INFO, format="%(message)s")
-    
+
     try:
         from src.model_training import ModelTrainer
         from src.config import BEST_MODEL_PATH
-        
+
         logger.info("Loading model and data for SHAP evaluation…")
         model = ModelTrainer.load_best_model(BEST_MODEL_PATH)
         trainer = ModelTrainer(use_smote=False)
         X_train, X_test, _, _ = trainer.load_data()
-        
+
         # Take a sample for summary plot to be fast
         bg_sample = X_train.sample(min(100, len(X_train)), random_state=42)
         explainer = SHAPExplainer(model, bg_sample)
-        
+
         test_sample = X_test.sample(min(200, len(X_test)), random_state=42)
         explainer.plot_summary(test_sample, save=True)
         logger.info("SHAP plots generated successfully!")
     except Exception as e:
         logger.error(f"SHAP Extraction failed: {e}")
+
 
 if __name__ == "__main__":
     generate_shap_plots()

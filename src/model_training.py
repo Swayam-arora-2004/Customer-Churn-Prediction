@@ -67,9 +67,7 @@ def _build_models() -> Dict[str, Any]:
         "logistic_regression": LogisticRegression(
             **MODEL_HYPERPARAMS["logistic_regression"]
         ),
-        "random_forest": RandomForestClassifier(
-            **MODEL_HYPERPARAMS["random_forest"]
-        ),
+        "random_forest": RandomForestClassifier(**MODEL_HYPERPARAMS["random_forest"]),
         "xgboost": XGBClassifier(**MODEL_HYPERPARAMS["xgboost"]),
         "catboost": CatBoostClassifier(**MODEL_HYPERPARAMS["catboost"]),
     }
@@ -233,9 +231,7 @@ class ModelTrainer:
 
         # Apply SMOTE on training set only
         X_smote, y_smote = (
-            self.apply_smote(X_train, y_train)
-            if self.use_smote
-            else (X_train, y_train)
+            self.apply_smote(X_train, y_train) if self.use_smote else (X_train, y_train)
         )
 
         models = _build_models()
@@ -276,9 +272,7 @@ class ModelTrainer:
                     "test_precision": float(
                         precision_score(y_test, y_pred, zero_division=0)
                     ),
-                    "test_recall": float(
-                        recall_score(y_test, y_pred, zero_division=0)
-                    ),
+                    "test_recall": float(recall_score(y_test, y_pred, zero_division=0)),
                     "test_avg_precision": float(
                         average_precision_score(y_test, y_pred_proba)
                     ),

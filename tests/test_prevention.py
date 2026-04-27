@@ -16,6 +16,7 @@ def engine() -> RetentionEngine:
 
 # ── Risk segmentation ─────────────────────────────────────────────────────────
 
+
 class TestSegmentation:
     def test_high_risk_segment(self, engine):
         result = engine.recommend({}, 0.85)
@@ -39,6 +40,7 @@ class TestSegmentation:
 
 
 # ── Recommendation rules ──────────────────────────────────────────────────────
+
 
 class TestRecommendationRules:
     def test_high_risk_includes_winback_call(self, engine):
@@ -90,6 +92,7 @@ class TestRecommendationRules:
 
 # ── Output structure ──────────────────────────────────────────────────────────
 
+
 class TestOutputStructure:
     def test_output_has_required_keys(self, engine):
         result = engine.recommend({}, 0.80)
@@ -137,6 +140,7 @@ class TestOutputStructure:
 
 
 # ── Impact & lift ─────────────────────────────────────────────────────────────
+
 
 class TestImpactAndLift:
     def test_retention_lift_between_0_and_1(self, engine):

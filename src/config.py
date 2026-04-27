@@ -79,7 +79,7 @@ BINARY_SERVICE_COLUMNS = [
 
 CATEGORICAL_COLUMNS = [
     "gender",
-    "SeniorCitizen",   # stored as 0/1 int but treated categorically
+    "SeniorCitizen",  # stored as 0/1 int but treated categorically
     "InternetService",
     "Contract",
     "PaymentMethod",
@@ -88,7 +88,7 @@ CATEGORICAL_COLUMNS = [
 # All feature columns after preprocessing (order matters for SHAP)
 RAW_FEATURE_COLUMNS = (
     NUMERIC_COLUMNS
-    + BINARY_COLUMNS[:-1]          # exclude target
+    + BINARY_COLUMNS[:-1]  # exclude target
     + BINARY_SERVICE_COLUMNS
     + CATEGORICAL_COLUMNS
 )
@@ -107,10 +107,10 @@ PREPROCESSING = {
 
 # ── Feature Engineering Config ────────────────────────────────────────────────
 FEATURE_ENGINEERING = {
-    "create_avg_monthly_charges": True,   # TotalCharges / (tenure + 1)
-    "create_service_count": True,         # Count of active services
+    "create_avg_monthly_charges": True,  # TotalCharges / (tenure + 1)
+    "create_service_count": True,  # Count of active services
     "create_has_premium_services": True,  # OnlineSecurity OR TechSupport
-    "create_tenure_group": True,          # Binned tenure: new/growing/loyal/champion
+    "create_tenure_group": True,  # Binned tenure: new/growing/loyal/champion
 }
 
 TENURE_BINS = [0, 12, 24, 48, float("inf")]
@@ -123,7 +123,7 @@ TRAINING = {
     "scoring_metric": "roc_auc",
     "use_smote": True,
     "smote_random_state": 42,
-    "class_weight": "balanced",   # fallback if SMOTE disabled
+    "class_weight": "balanced",  # fallback if SMOTE disabled
 }
 
 MODEL_HYPERPARAMS = {
@@ -144,13 +144,13 @@ MODEL_HYPERPARAMS = {
         "n_jobs": -1,
     },
     "xgboost": {
-        "objective": "binary:logistic",   # Must be explicit for sklearn ≥1.6 tag system
+        "objective": "binary:logistic",  # Must be explicit for sklearn ≥1.6 tag system
         "n_estimators": 300,
         "max_depth": 6,
         "learning_rate": 0.05,
         "subsample": 0.8,
         "colsample_bytree": 0.8,
-        "scale_pos_weight": 3,    # ~3:1 non-churn:churn ratio
+        "scale_pos_weight": 3,  # ~3:1 non-churn:churn ratio
         "eval_metric": "auc",
         "random_state": 42,
         "n_jobs": -1,
@@ -190,16 +190,16 @@ EVALUATION = {
 
 # ── Explainability Config ─────────────────────────────────────────────────────
 EXPLAINABILITY = {
-    "top_n_features": 10,      # Show top N SHAP features per prediction
-    "background_samples": 100, # Background samples for SHAP kernel explainer
+    "top_n_features": 10,  # Show top N SHAP features per prediction
+    "background_samples": 100,  # Background samples for SHAP kernel explainer
 }
 
 # ── Prevention / Retention Engine Config ─────────────────────────────────────
 PREVENTION = {
     "risk_thresholds": {
-        "high": 0.70,    # >= 70% → High Risk
+        "high": 0.70,  # >= 70% → High Risk
         "medium": 0.30,  # 30–70% → Medium Risk
-                         # < 30%  → Low Risk
+        # < 30%  → Low Risk
     },
     "max_recommendations": 3,  # Max retention actions to return per customer
 }
@@ -210,7 +210,7 @@ API = {
     "port": int(os.getenv("API_PORT", 8000)),
     "debug": os.getenv("API_DEBUG", "false").lower() == "true",
     "version": os.getenv("API_VERSION", "v1"),
-    "max_batch_size": 1000,    # Max rows in a single batch prediction
+    "max_batch_size": 1000,  # Max rows in a single batch prediction
 }
 
 # ── Logging Config ────────────────────────────────────────────────────────────
@@ -222,9 +222,7 @@ LOGGING = {
 
 # ── Monitoring Config ─────────────────────────────────────────────────────────
 MONITORING = {
-    "drift_psi_threshold": float(
-        os.getenv("DRIFT_PSI_THRESHOLD", 0.2)
-    ),
+    "drift_psi_threshold": float(os.getenv("DRIFT_PSI_THRESHOLD", 0.2)),
     "churn_score_alert_threshold": float(
         os.getenv("CHURN_SCORE_ALERT_THRESHOLD", 0.70)
     ),

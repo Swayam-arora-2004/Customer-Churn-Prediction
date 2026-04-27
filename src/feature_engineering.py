@@ -16,7 +16,6 @@ These features improve model performance and SHAP interpretability.
 import logging
 from typing import List
 
-import numpy as np
 import pandas as pd
 
 from src.config import (
@@ -105,9 +104,7 @@ class FeatureEngineer:
                 c for c in ["OnlineSecurity", "TechSupport"] if c in df.columns
             ]
             if premium_cols:
-                df["has_premium_services"] = (
-                    df[premium_cols].any(axis=1).astype(int)
-                )
+                df["has_premium_services"] = df[premium_cols].any(axis=1).astype(int)
                 added.append("has_premium_services")
 
         if self.create_tenure_group and "tenure" in df.columns:

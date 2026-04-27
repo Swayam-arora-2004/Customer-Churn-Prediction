@@ -19,12 +19,10 @@ Run:
 """
 
 import json
-import os
 import sqlite3
 import sys
 import time
 import uuid
-from contextlib import contextmanager
 from pathlib import Path
 from typing import Dict, Any, Optional
 
@@ -46,7 +44,6 @@ from pydantic import ValidationError
 
 from app.logger import get_logger
 from app.schemas import (
-    APIResponse,
     BatchPredictRequest,
     PredictRequest,
 )
@@ -89,6 +86,7 @@ def create_app() -> Flask:
     if model is not None and preprocessor is not None:
         try:
             from src.config import PROCESSED_X_TRAIN_PATH
+
             _bg = pd.read_csv(PROCESSED_X_TRAIN_PATH)
             n_bg = min(100, len(_bg))
             X_train_bg = _bg.sample(n_bg, random_state=42)
@@ -127,17 +125,23 @@ def create_app() -> Flask:
     # ── Helper: standardised response ────────────────────────────────────────
 
     def _ok(data: Any):
-        return jsonify({"status": "success", "data": data,
-                        "request_id": g.request_id}), 200
+        return (
+            jsonify({"status": "success", "data": data, "request_id": g.request_id}),
+            200,
+        )
 
     def _err(message: str, code: int = 400):
         logger.warning("API error | %s", message)
-        return jsonify({"status": "error", "error": message,
-                        "request_id": g.request_id}), code
+        return (
+            jsonify({"status": "error", "error": message, "request_id": g.request_id}),
+            code,
+        )
 
     def _model_required():
         if model is None or preprocessor is None:
-            return _err("Model artefacts not available. Run training pipeline first.", 503)
+            return _err(
+                "Model artefacts not available. Run training pipeline first.", 503
+            )
         return None
 
     # ── Helper: parse & transform features ───────────────────────────────────
@@ -159,31 +163,35 @@ def create_app() -> Flask:
     def health():
         if model is None:
             return _err("Model not loaded", 503)
-        return _ok({
-            "status": "healthy",
-            "model_name": metadata.get("model_name", "unknown"),
-            "model_class": metadata.get("model_class", "unknown"),
-            "feature_count": metadata.get("feature_count", 0),
-            "test_roc_auc": metadata.get("test_roc_auc", 0),
-            "test_f1": metadata.get("test_f1", 0),
-            "trained_at": metadata.get("trained_at", "unknown"),
-            "uptime_seconds": round(time.time() - _START_TIME, 2),
-            "version": API["version"],
-        })
+        return _ok(
+            {
+                "status": "healthy",
+                "model_name": metadata.get("model_name", "unknown"),
+                "model_class": metadata.get("model_class", "unknown"),
+                "feature_count": metadata.get("feature_count", 0),
+                "test_roc_auc": metadata.get("test_roc_auc", 0),
+                "test_f1": metadata.get("test_f1", 0),
+                "trained_at": metadata.get("trained_at", "unknown"),
+                "uptime_seconds": round(time.time() - _START_TIME, 2),
+                "version": API["version"],
+            }
+        )
 
     # ── GET /v1/metrics ───────────────────────────────────────────────────────
     @app.route(f"/{API['version']}/metrics", methods=["GET"])
     def metrics():
         if not metadata:
             return _err("No model metadata available.", 503)
-        return _ok({
-            "model_name": metadata.get("model_name"),
-            "test_roc_auc": metadata.get("test_roc_auc"),
-            "test_f1": metadata.get("test_f1"),
-            "test_precision": metadata.get("test_precision"),
-            "test_recall": metadata.get("test_recall"),
-            "trained_at": metadata.get("trained_at"),
-        })
+        return _ok(
+            {
+                "model_name": metadata.get("model_name"),
+                "test_roc_auc": metadata.get("test_roc_auc"),
+                "test_f1": metadata.get("test_f1"),
+                "test_precision": metadata.get("test_precision"),
+                "test_recall": metadata.get("test_recall"),
+                "trained_at": metadata.get("trained_at"),
+            }
+        )
 
     # ── POST /v1/predict ──────────────────────────────────────────────────────
     @app.route(f"/{API['version']}/predict", methods=["POST"])
@@ -233,22 +241,32 @@ def create_app() -> Flask:
             X = preprocessor.transform(raw_df)
             prob = float(model.predict_proba(X)[0, 1])
             will_churn = prob >= 0.5
-            results.append({
-                "customer_id": item.customer_id,
-                "churn_probability": round(prob, 4),
-                "will_churn": will_churn,
-                "risk_segment": _segment_label(prob),
-                "confidence": _confidence_label(prob),
-            })
-            _log_prediction(item.customer_id, prob, will_churn, item.features.model_dump())
+            results.append(
+                {
+                    "customer_id": item.customer_id,
+                    "churn_probability": round(prob, 4),
+                    "will_churn": will_churn,
+                    "risk_segment": _segment_label(prob),
+                    "confidence": _confidence_label(prob),
+                }
+            )
+            _log_prediction(
+                item.customer_id, prob, will_churn, item.features.model_dump()
+            )
 
-        return _ok({
-            "total": len(results),
-            "high_risk": sum(1 for r in results if r["risk_segment"] == "High Risk"),
-            "medium_risk": sum(1 for r in results if r["risk_segment"] == "Medium Risk"),
-            "low_risk": sum(1 for r in results if r["risk_segment"] == "Low Risk"),
-            "predictions": results,
-        })
+        return _ok(
+            {
+                "total": len(results),
+                "high_risk": sum(
+                    1 for r in results if r["risk_segment"] == "High Risk"
+                ),
+                "medium_risk": sum(
+                    1 for r in results if r["risk_segment"] == "Medium Risk"
+                ),
+                "low_risk": sum(1 for r in results if r["risk_segment"] == "Low Risk"),
+                "predictions": results,
+            }
+        )
 
     # ── POST /v1/explain ──────────────────────────────────────────────────────
     @app.route(f"/{API['version']}/explain", methods=["POST"])
@@ -346,7 +364,8 @@ def _init_db() -> None:
     """Create the predictions audit table if it doesn't exist."""
     AUDIT_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     with sqlite3.connect(AUDIT_DB_PATH) as conn:
-        conn.execute("""
+        conn.execute(
+            """
             CREATE TABLE IF NOT EXISTS predictions (
                 id TEXT PRIMARY KEY,
                 customer_id TEXT,
@@ -355,7 +374,8 @@ def _init_db() -> None:
                 timestamp TEXT,
                 input_json TEXT
             )
-        """)
+        """
+        )
         conn.commit()
 
 

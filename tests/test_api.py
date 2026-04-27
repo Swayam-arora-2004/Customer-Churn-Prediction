@@ -103,6 +103,7 @@ def client(mock_model, mock_preprocessor, mock_metadata, tmp_path):
 
 # ── /v1/health ────────────────────────────────────────────────────────────────
 
+
 class TestHealth:
     def test_health_returns_200(self, client):
         resp = client.get("/v1/health")
@@ -127,6 +128,7 @@ class TestHealth:
 
 # ── /v1/metrics ───────────────────────────────────────────────────────────────
 
+
 class TestMetrics:
     def test_metrics_returns_200(self, client):
         resp = client.get("/v1/metrics")
@@ -140,6 +142,7 @@ class TestMetrics:
 
 # ── /v1/predict ───────────────────────────────────────────────────────────────
 
+
 class TestPredict:
     def test_valid_predict_returns_200(self, client):
         resp = client.post(
@@ -150,38 +153,28 @@ class TestPredict:
         assert resp.status_code == 200
 
     def test_predict_returns_probability(self, client):
-        data = resp_json(
-            client.post("/v1/predict", json=VALID_PREDICT_PAYLOAD)
-        )["data"]
+        data = resp_json(client.post("/v1/predict", json=VALID_PREDICT_PAYLOAD))["data"]
         assert "churn_probability" in data
         assert 0.0 <= data["churn_probability"] <= 1.0
 
     def test_predict_returns_risk_segment(self, client):
-        data = resp_json(
-            client.post("/v1/predict", json=VALID_PREDICT_PAYLOAD)
-        )["data"]
+        data = resp_json(client.post("/v1/predict", json=VALID_PREDICT_PAYLOAD))["data"]
         assert data["risk_segment"] in ("High Risk", "Medium Risk", "Low Risk")
 
     def test_predict_probability_matches_mock(self, client):
-        data = resp_json(
-            client.post("/v1/predict", json=VALID_PREDICT_PAYLOAD)
-        )["data"]
+        data = resp_json(client.post("/v1/predict", json=VALID_PREDICT_PAYLOAD))["data"]
         # mock returns prob=0.65
         assert abs(data["churn_probability"] - 0.65) < 0.01
 
     def test_predict_high_prob_high_risk(self, client, mock_model):
         mock_model.predict_proba.return_value = np.array([[0.20, 0.80]])
-        data = resp_json(
-            client.post("/v1/predict", json=VALID_PREDICT_PAYLOAD)
-        )["data"]
+        data = resp_json(client.post("/v1/predict", json=VALID_PREDICT_PAYLOAD))["data"]
         assert data["risk_segment"] == "High Risk"
         assert data["will_churn"] is True
 
     def test_predict_low_prob_low_risk(self, client, mock_model):
         mock_model.predict_proba.return_value = np.array([[0.90, 0.10]])
-        data = resp_json(
-            client.post("/v1/predict", json=VALID_PREDICT_PAYLOAD)
-        )["data"]
+        data = resp_json(client.post("/v1/predict", json=VALID_PREDICT_PAYLOAD))["data"]
         assert data["risk_segment"] == "Low Risk"
         assert data["will_churn"] is False
 
@@ -205,6 +198,7 @@ class TestPredict:
 
 
 # ── /v1/predict/batch ────────────────────────────────────────────────────────
+
 
 class TestPredictBatch:
     def test_batch_predict_returns_200(self, client):
@@ -232,32 +226,34 @@ class TestPredictBatch:
 
 # ── /v1/recommend ────────────────────────────────────────────────────────────
 
+
 class TestRecommend:
     def test_recommend_returns_200(self, client):
         resp = client.post("/v1/recommend", json=VALID_PREDICT_PAYLOAD)
         assert resp.status_code == 200
 
     def test_recommend_has_recommendations_list(self, client):
-        data = resp_json(
-            client.post("/v1/recommend", json=VALID_PREDICT_PAYLOAD)
-        )["data"]
+        data = resp_json(client.post("/v1/recommend", json=VALID_PREDICT_PAYLOAD))[
+            "data"
+        ]
         assert "recommendations" in data
         assert isinstance(data["recommendations"], list)
 
     def test_recommend_has_segment(self, client):
-        data = resp_json(
-            client.post("/v1/recommend", json=VALID_PREDICT_PAYLOAD)
-        )["data"]
+        data = resp_json(client.post("/v1/recommend", json=VALID_PREDICT_PAYLOAD))[
+            "data"
+        ]
         assert data["customer_segment"] in ("High Risk", "Medium Risk", "Low Risk")
 
     def test_recommend_has_retention_lift(self, client):
-        data = resp_json(
-            client.post("/v1/recommend", json=VALID_PREDICT_PAYLOAD)
-        )["data"]
+        data = resp_json(client.post("/v1/recommend", json=VALID_PREDICT_PAYLOAD))[
+            "data"
+        ]
         assert 0.0 <= data["estimated_retention_lift"] <= 1.0
 
 
 # ── 404 / 405 handlers ────────────────────────────────────────────────────────
+
 
 class TestErrorHandlers:
     def test_unknown_route_404(self, client):
@@ -270,6 +266,7 @@ class TestErrorHandlers:
 
 
 # ── Utility ───────────────────────────────────────────────────────────────────
+
 
 def resp_json(resp) -> dict:
     return json.loads(resp.data)

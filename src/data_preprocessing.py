@@ -25,7 +25,6 @@ from pathlib import Path
 from typing import Optional, Tuple
 
 import joblib
-import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler
@@ -43,7 +42,6 @@ from src.config import (
     NUMERIC_COLUMNS,
     BINARY_COLUMNS,
     BINARY_SERVICE_COLUMNS,
-    CATEGORICAL_COLUMNS,
     PREPROCESSING,
 )
 
@@ -104,7 +102,7 @@ class DataPreprocessor:
         logger.info("Raw data loaded | shape=%s", df.shape)
         return df
 
-    def clean(self, df: pd.DataFrame) -> pd.DataFrame:
+    def clean(self, df: pd.DataFrame, drop_dupes: bool = True) -> pd.DataFrame:
         """
         Apply all cleaning steps to raw DataFrame.
 
@@ -112,7 +110,7 @@ class DataPreprocessor:
         -----
         1. Drop the ID column (no predictive value)
         2. Fix TotalCharges: blank strings → 0.0, cast to float
-        3. Drop duplicate rows
+        3. Drop duplicate rows (if drop_dupes=True)
         4. Reset index
         """
         logger.info("Cleaning data …")
@@ -136,7 +134,7 @@ class DataPreprocessor:
 
         # 3. Drop exact duplicates
         dupes = df.duplicated().sum()
-        if dupes:
+        if drop_dupes and dupes:
             df = df.drop_duplicates()
             logger.warning("Dropped %d duplicate rows", dupes)
 
@@ -186,7 +184,8 @@ class DataPreprocessor:
 
         # Multi-class one-hot encoding
         ohe_columns = [
-            c for c in ["InternetService", "Contract", "PaymentMethod"]
+            c
+            for c in ["InternetService", "Contract", "PaymentMethod"]
             if c in df.columns
         ]
         if ohe_columns:
@@ -314,7 +313,7 @@ class DataPreprocessor:
         if include_id and ID_COLUMN in df.columns:
             customer_ids = df[ID_COLUMN].copy()
 
-        df = self.clean(df)
+        df = self.clean(df, drop_dupes=False)
         df = self.encode(df)
 
         # Drop target if it slipped through
@@ -364,9 +363,7 @@ class DataPreprocessor:
         X_test.to_csv(PROCESSED_X_TEST_PATH, index=False)
         y_train.to_csv(PROCESSED_Y_TRAIN_PATH, index=False)
         y_test.to_csv(PROCESSED_Y_TEST_PATH, index=False)
-        logger.info(
-            "Processed data saved → %s", PROCESSED_X_TRAIN_PATH.parent
-        )
+        logger.info("Processed data saved → %s", PROCESSED_X_TRAIN_PATH.parent)
 
     def _save_feature_names(self) -> None:
         """Persist feature names as JSON for downstream alignment checks."""
@@ -388,6 +385,7 @@ class DataPreprocessor:
 
 
 # ── Module-level entry point ──────────────────────────────────────────────────
+
 
 def run_preprocessing(
     raw_path: Path = RAW_DATA_PATH,

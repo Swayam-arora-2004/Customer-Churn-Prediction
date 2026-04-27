@@ -37,9 +37,9 @@ class RetentionAction:
     action_id: str
     title: str
     description: str
-    category: str          # "pricing" | "contract" | "service" | "support" | "engagement"
-    impact_score: float    # Estimated reduction in churn probability [0.0 – 1.0]
-    priority: str          # "critical" | "high" | "medium" | "low"
+    category: str  # "pricing" | "contract" | "service" | "support" | "engagement"
+    impact_score: float  # Estimated reduction in churn probability [0.0 – 1.0]
+    priority: str  # "critical" | "high" | "medium" | "low"
     tags: List[str] = field(default_factory=list)
 
     def to_dict(self) -> Dict:
@@ -271,7 +271,7 @@ class RetentionEngine:
         """
         segment = self._segment(churn_probability)
         shap_drivers = shap_drivers or []
-        driver_features = {d["feature"] for d in shap_drivers}
+        {d["feature"] for d in shap_drivers}
 
         candidate_actions: List[RetentionAction] = []
 
@@ -332,7 +332,9 @@ class RetentionEngine:
             candidate_actions.append(_ACTION_ENGAGEMENT_EMAIL)
 
         # ── Boost actions whose tags match SHAP top drivers ────────
-        top_driver_features = {d["feature"] for d in shap_drivers if d["shap_value"] > 0}
+        top_driver_features = {
+            d["feature"] for d in shap_drivers if d["shap_value"] > 0
+        }
         for action in candidate_actions:
             if any(tag in " ".join(top_driver_features).lower() for tag in action.tags):
                 action.impact_score = min(1.0, action.impact_score * 1.15)

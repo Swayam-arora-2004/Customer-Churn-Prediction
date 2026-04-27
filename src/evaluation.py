@@ -11,12 +11,12 @@ Outputs saved to figures/:
 ─────────────────────────────────────────────────────────────────────────────
 """
 
-import json
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 import matplotlib
+
 matplotlib.use("Agg")  # non-interactive backend for server environments
 import matplotlib.pyplot as plt
 import numpy as np
@@ -130,9 +130,7 @@ class ModelEvaluator:
         """Return sklearn classification report as a formatted string."""
         y_proba = model.predict_proba(X_test)[:, 1]
         y_pred = (y_proba >= self.threshold).astype(int)
-        return classification_report(
-            y_test, y_pred, target_names=["No Churn", "Churn"]
-        )
+        return classification_report(y_test, y_pred, target_names=["No Churn", "Churn"])
 
     # ── Plots ────────────────────────────────────────────────────────────────
 
@@ -146,8 +144,9 @@ class ModelEvaluator:
         auc = roc_auc_score(y_test, y_proba)
 
         fig, ax = plt.subplots(figsize=(8, 6))
-        ax.plot(fpr, tpr, color=PALETTE["positive"], lw=2,
-                label=f"ROC (AUC = {auc:.4f})")
+        ax.plot(
+            fpr, tpr, color=PALETTE["positive"], lw=2, label=f"ROC (AUC = {auc:.4f})"
+        )
         ax.plot([0, 1], [0, 1], "--", color="grey", lw=1, label="Random")
         ax.fill_between(fpr, tpr, alpha=0.08, color=PALETTE["positive"])
         ax.set_xlabel("False Positive Rate", fontsize=12)
@@ -174,15 +173,27 @@ class ModelEvaluator:
         baseline = y_test.mean()
 
         fig, ax = plt.subplots(figsize=(8, 6))
-        ax.step(recall, precision, color=PALETTE["neutral"], lw=2, where="post",
-                label=f"PR (AP = {ap:.4f})")
-        ax.axhline(baseline, ls="--", color="grey", lw=1,
-                   label=f"Baseline (churn rate = {baseline:.2f})")
+        ax.step(
+            recall,
+            precision,
+            color=PALETTE["neutral"],
+            lw=2,
+            where="post",
+            label=f"PR (AP = {ap:.4f})",
+        )
+        ax.axhline(
+            baseline,
+            ls="--",
+            color="grey",
+            lw=1,
+            label=f"Baseline (churn rate = {baseline:.2f})",
+        )
         ax.fill_between(recall, precision, alpha=0.08, color=PALETTE["neutral"])
         ax.set_xlabel("Recall", fontsize=12)
         ax.set_ylabel("Precision", fontsize=12)
-        ax.set_title(f"Precision-Recall Curve — {model_name}", fontsize=14,
-                     fontweight="bold")
+        ax.set_title(
+            f"Precision-Recall Curve — {model_name}", fontsize=14, fontweight="bold"
+        )
         ax.legend(fontsize=11)
         ax.grid(True, alpha=0.3)
         plt.tight_layout()
@@ -203,8 +214,10 @@ class ModelEvaluator:
         cm_pct = cm.astype(float) / cm.sum(axis=1, keepdims=True)
 
         labels = np.array(
-            [[f"{v}\n({p:.1%})" for v, p in zip(row_v, row_p)]
-             for row_v, row_p in zip(cm, cm_pct)]
+            [
+                [f"{v}\n({p:.1%})" for v, p in zip(row_v, row_p)]
+                for row_v, row_p in zip(cm, cm_pct)
+            ]
         )
 
         fig, ax = plt.subplots(figsize=(6, 5))
@@ -221,8 +234,7 @@ class ModelEvaluator:
         )
         ax.set_xlabel("Predicted", fontsize=12)
         ax.set_ylabel("Actual", fontsize=12)
-        ax.set_title(f"Confusion Matrix — {model_name}", fontsize=14,
-                     fontweight="bold")
+        ax.set_title(f"Confusion Matrix — {model_name}", fontsize=14, fontweight="bold")
         plt.tight_layout()
 
         path = self.figures_dir / "confusion_matrix.png"
@@ -243,17 +255,32 @@ class ModelEvaluator:
         top_importances = importances[indices]
 
         fig, ax = plt.subplots(figsize=(10, 7))
-        colors = [PALETTE["positive"] if i == 0 else PALETTE["neutral"]
-                  for i in range(len(top_features))]
-        bars = ax.barh(top_features[::-1], top_importances[::-1],
-                       color=colors[::-1], edgecolor="white", height=0.7)
+        colors = [
+            PALETTE["positive"] if i == 0 else PALETTE["neutral"]
+            for i in range(len(top_features))
+        ]
+        bars = ax.barh(
+            top_features[::-1],
+            top_importances[::-1],
+            color=colors[::-1],
+            edgecolor="white",
+            height=0.7,
+        )
         ax.set_xlabel("Feature Importance", fontsize=12)
-        ax.set_title(f"Top {top_n} Feature Importances — {model_name}",
-                     fontsize=14, fontweight="bold")
+        ax.set_title(
+            f"Top {top_n} Feature Importances — {model_name}",
+            fontsize=14,
+            fontweight="bold",
+        )
         ax.grid(axis="x", alpha=0.3)
         for bar, val in zip(bars, top_importances[::-1]):
-            ax.text(val + 0.001, bar.get_y() + bar.get_height() / 2,
-                    f"{val:.4f}", va="center", fontsize=9)
+            ax.text(
+                val + 0.001,
+                bar.get_y() + bar.get_height() / 2,
+                f"{val:.4f}",
+                va="center",
+                fontsize=9,
+            )
         plt.tight_layout()
 
         path = self.figures_dir / "feature_importance.png"
@@ -264,23 +291,27 @@ class ModelEvaluator:
 
 # ── Entry point ───────────────────────────────────────────────────────────────
 
+
 def generate_plots():
     logging.basicConfig(level=logging.INFO, format="%(message)s")
-    
+
     try:
         from src.model_training import ModelTrainer
         from src.config import BEST_MODEL_PATH
-        
+
         logger.info("Loading model and data for evaluation…")
         model = ModelTrainer.load_best_model(BEST_MODEL_PATH)
         trainer = ModelTrainer(use_smote=False)  # just using it for load_data
         _, X_test, _, y_test = trainer.load_data()
-        
+
         evaluator = ModelEvaluator()
-        evaluator.evaluate(model, X_test, y_test, model_name="Best Model", save_plots=True)
+        evaluator.evaluate(
+            model, X_test, y_test, model_name="Best Model", save_plots=True
+        )
         logger.info("All performance plots generated successfully!")
     except Exception as e:
         logger.error(f"Evaluation failed: {e}")
+
 
 if __name__ == "__main__":
     generate_plots()

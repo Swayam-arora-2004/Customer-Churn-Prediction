@@ -12,7 +12,6 @@ Supports two formats configured via .env:
 import json
 import logging
 import sys
-import time
 from typing import Any, Dict
 
 from src.config import LOGGING as LOG_CONFIG
