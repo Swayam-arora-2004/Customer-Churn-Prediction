@@ -35,10 +35,10 @@ RUN useradd --create-home --shell /bin/bash appuser && \
 USER appuser
 
 # Expose ports
-EXPOSE 5000
+EXPOSE 8000
 EXPOSE 8501
 
 # Default command: Flask API
 # Override with: docker run <image> streamlit run app/dashboard.py
-CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:5000", "--timeout", "120", \
+CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:8000", "--timeout", "120", \
      "app.app:create_app()"]
