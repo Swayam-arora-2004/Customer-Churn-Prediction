@@ -15,7 +15,7 @@ test:
 # Run linters and formatters manually
 lint:
 	black src/ app/ tests/
-	flake8 src/ app/ tests/ --max-line-length=88 --extend-ignore=E203,E402,E501
+	flake8 src/ app/ tests/
 
 # Build the complete production Docker stack
 build:
