@@ -21,11 +21,24 @@ Run:
 import json
 import os
 import sqlite3
+import sys
 import time
 import uuid
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Dict, Any, Optional
+
+# ── Path fix ──────────────────────────────────────────────────────────────────
+# When run as `python app/app.py`, Python sets sys.path[0] = 'app/'
+# so `from app.xxx` and `from src.xxx` fail.
+# Inserting the project root fixes both invocation styles:
+#   python app/app.py          ← script mode (needs this fix)
+#   python -m app.app          ← module mode (root already on path)
+#   gunicorn "app.app:create_app()" ← production (root already on path)
+_PROJECT_ROOT = Path(__file__).parent.parent.resolve()
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
+
 
 import pandas as pd
 from flask import Flask, g, jsonify, request

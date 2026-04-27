@@ -207,7 +207,7 @@ PREVENTION = {
 # ── API Config ────────────────────────────────────────────────────────────────
 API = {
     "host": os.getenv("API_HOST", "0.0.0.0"),
-    "port": int(os.getenv("API_PORT", 5000)),
+    "port": int(os.getenv("API_PORT", 8000)),
     "debug": os.getenv("API_DEBUG", "false").lower() == "true",
     "version": os.getenv("API_VERSION", "v1"),
     "max_batch_size": 1000,    # Max rows in a single batch prediction
