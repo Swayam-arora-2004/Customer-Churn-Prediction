@@ -76,9 +76,9 @@ def create_app() -> Flask:
     if model is not None and preprocessor is not None:
         try:
             from src.config import PROCESSED_X_TRAIN_PATH
-            X_train_bg = pd.read_csv(PROCESSED_X_TRAIN_PATH).sample(
-                100, random_state=42
-            )
+            _bg = pd.read_csv(PROCESSED_X_TRAIN_PATH)
+            n_bg = min(100, len(_bg))
+            X_train_bg = _bg.sample(n_bg, random_state=42)
             shap_explainer = SHAPExplainer(model, X_train_bg)
             logger.info("SHAP explainer initialised.")
         except Exception as exc:

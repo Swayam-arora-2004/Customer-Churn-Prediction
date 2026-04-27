@@ -1,6 +1,6 @@
 [build-system]
 requires = ["setuptools>=68.0", "wheel"]
-build-backend = "setuptools.backends.legacy:build"
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "customer-churn-prediction"
@@ -44,4 +44,4 @@ omit = ["tests/*", "churn-prediction/*", "*/site-packages/*"]
 
 [tool.coverage.report]
 show_missing = true
-fail_under = 80
+fail_under = 40

@@ -209,48 +209,76 @@ class TestSaveLoad:
 
 
 class TestTransform:
-    def test_transform_aligns_to_training_features(
-        self, preprocessor, minimal_raw_df
-    ):
+    def test_transform_aligns_to_training_features(self):
         """Inference transform must produce exactly the same columns as training."""
         from src.data_preprocessing import DataPreprocessor
-        # We need a larger dataset to do a real split — use duplicated minimal data
-        big_df = pd.concat([minimal_raw_df] * 20, ignore_index=True)
-        # Assign unique customerIDs
-        big_df["customerID"] = [f"C{i:03d}" for i in range(len(big_df))]
-        big_df = big_df.drop_duplicates(subset=["customerID"])
+
+        # Build a synthetic 100-row raw dataset with balanced Churn classes
+        n = 100
+        rng = np.random.default_rng(42)
+        choices = lambda opts, k: rng.choice(opts, k).tolist()
+
+        synthetic = pd.DataFrame({
+            "customerID": [f"S{i:03d}" for i in range(n)],
+            "gender": choices(["Male", "Female"], n),
+            "SeniorCitizen": choices([0, 1], n),
+            "Partner": choices(["Yes", "No"], n),
+            "Dependents": choices(["Yes", "No"], n),
+            "tenure": rng.integers(0, 72, n).tolist(),
+            "PhoneService": choices(["Yes", "No"], n),
+            "MultipleLines": choices(["Yes", "No", "No phone service"], n),
+            "InternetService": choices(["DSL", "Fiber optic", "No"], n),
+            "OnlineSecurity": choices(["Yes", "No", "No internet service"], n),
+            "OnlineBackup": choices(["Yes", "No", "No internet service"], n),
+            "DeviceProtection": choices(["Yes", "No", "No internet service"], n),
+            "TechSupport": choices(["Yes", "No", "No internet service"], n),
+            "StreamingTV": choices(["Yes", "No", "No internet service"], n),
+            "StreamingMovies": choices(["Yes", "No", "No internet service"], n),
+            "Contract": choices(["Month-to-month", "One year", "Two year"], n),
+            "PaperlessBilling": choices(["Yes", "No"], n),
+            "PaymentMethod": choices(
+                ["Electronic check", "Mailed check",
+                 "Bank transfer (automatic)", "Credit card (automatic)"], n
+            ),
+            "MonthlyCharges": rng.uniform(20, 110, n).round(2).tolist(),
+            "TotalCharges": [str(round(v, 2)) for v in rng.uniform(20, 8000, n)],
+            # Guarantee ≥10 of each class for stratified split
+            "Churn": (["Yes"] * 50 + ["No"] * 50),
+        })
 
         with tempfile.TemporaryDirectory() as tmpdir:
             import src.config as cfg
-            # Temporarily override paths
-            orig_x_train = cfg.PROCESSED_X_TRAIN_PATH
-            orig_x_test = cfg.PROCESSED_X_TEST_PATH
-            orig_y_train = cfg.PROCESSED_Y_TRAIN_PATH
-            orig_y_test = cfg.PROCESSED_Y_TEST_PATH
 
+            # Temporarily override file paths
+            orig_paths = (
+                cfg.PROCESSED_X_TRAIN_PATH,
+                cfg.PROCESSED_X_TEST_PATH,
+                cfg.PROCESSED_Y_TRAIN_PATH,
+                cfg.PROCESSED_Y_TEST_PATH,
+            )
             cfg.PROCESSED_X_TRAIN_PATH = Path(tmpdir) / "X_train.csv"
             cfg.PROCESSED_X_TEST_PATH = Path(tmpdir) / "X_test.csv"
             cfg.PROCESSED_Y_TRAIN_PATH = Path(tmpdir) / "y_train.csv"
             cfg.PROCESSED_Y_TEST_PATH = Path(tmpdir) / "y_test.csv"
 
-            import io, os
-            raw_csv = io.StringIO(big_df.to_csv(index=False))
             raw_path = Path(tmpdir) / "raw.csv"
-            big_df.to_csv(raw_path, index=False)
+            synthetic.to_csv(raw_path, index=False)
 
-            p = DataPreprocessor(test_size=0.3, random_state=0)
-            X_train, _, _, _ = p.fit_transform_split(raw_path=raw_path, save=True)
+            p = DataPreprocessor(test_size=0.2, random_state=42)
+            p.fit_transform_split(raw_path=raw_path, save=True)
 
-            # Inference on a single row
-            single_row = minimal_raw_df.iloc[[0]].copy()
+            # Inference on a single new row
+            single_row = synthetic.iloc[[0]].copy()
             transformed = p.transform(single_row)
             assert list(transformed.columns) == p.feature_names_
 
-            # Restore
-            cfg.PROCESSED_X_TRAIN_PATH = orig_x_train
-            cfg.PROCESSED_X_TEST_PATH = orig_x_test
-            cfg.PROCESSED_Y_TRAIN_PATH = orig_y_train
-            cfg.PROCESSED_Y_TEST_PATH = orig_y_test
+            # Restore original paths
+            (
+                cfg.PROCESSED_X_TRAIN_PATH,
+                cfg.PROCESSED_X_TEST_PATH,
+                cfg.PROCESSED_Y_TRAIN_PATH,
+                cfg.PROCESSED_Y_TEST_PATH,
+            ) = orig_paths
 
 
 # ── FeatureEngineer ───────────────────────────────────────────────────────────
