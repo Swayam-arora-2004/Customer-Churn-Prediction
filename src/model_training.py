@@ -31,7 +31,8 @@ from catboost import CatBoostClassifier
 from imblearn.over_sampling import SMOTE
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import StratifiedKFold, cross_validate
+from sklearn.base import clone
+from sklearn.model_selection import StratifiedKFold
 from sklearn.metrics import (
     roc_auc_score,
     f1_score,
@@ -160,19 +161,46 @@ class ModelTrainer:
         X: pd.DataFrame,
         y: pd.Series,
     ) -> Dict[str, float]:
-        """Run stratified K-fold CV and return mean scores."""
+        """
+        Manual stratified K-fold CV — computes all metrics fold-by-fold.
+
+        Deliberately avoids sklearn's cross_validate() which calls is_classifier()
+        → get_tags() → __sklearn_tags__(), breaking on CatBoost ≤1.2 and sklearn ≥1.6.
+        Using clone() + predict_proba() directly is fully compatible with all estimators.
+        """
         logger.info("Cross-validating %s …", name)
-        scoring = ["roc_auc", "f1", "precision", "recall", "average_precision"]
-        cv_results = cross_validate(
-            model, X, y,
-            cv=self.cv,
-            scoring=scoring,
-            return_train_score=False,
-            n_jobs=-1,
-        )
+
+        fold_auc, fold_f1, fold_prec, fold_rec, fold_ap = [], [], [], [], []
+
+        X_arr = X.reset_index(drop=True)
+        y_arr = y.reset_index(drop=True)
+
+        for fold_idx, (train_idx, val_idx) in enumerate(
+            self.cv.split(X_arr, y_arr), start=1
+        ):
+            X_fold_train = X_arr.iloc[train_idx]
+            X_fold_val = X_arr.iloc[val_idx]
+            y_fold_train = y_arr.iloc[train_idx]
+            y_fold_val = y_arr.iloc[val_idx]
+
+            fold_model = clone(model)
+            fold_model.fit(X_fold_train, y_fold_train)
+
+            y_proba = fold_model.predict_proba(X_fold_val)[:, 1]
+            y_pred = (y_proba >= 0.5).astype(int)
+
+            fold_auc.append(roc_auc_score(y_fold_val, y_proba))
+            fold_f1.append(f1_score(y_fold_val, y_pred, zero_division=0))
+            fold_prec.append(precision_score(y_fold_val, y_pred, zero_division=0))
+            fold_rec.append(recall_score(y_fold_val, y_pred, zero_division=0))
+            fold_ap.append(average_precision_score(y_fold_val, y_proba))
+
         scores = {
-            metric: float(np.mean(cv_results[f"test_{metric}"]))
-            for metric in scoring
+            "roc_auc": float(np.mean(fold_auc)),
+            "f1": float(np.mean(fold_f1)),
+            "precision": float(np.mean(fold_prec)),
+            "recall": float(np.mean(fold_rec)),
+            "average_precision": float(np.mean(fold_ap)),
         }
         logger.info(
             "%s CV | AUC=%.4f F1=%.4f P=%.4f R=%.4f",

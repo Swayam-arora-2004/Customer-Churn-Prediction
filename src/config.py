@@ -144,6 +144,7 @@ MODEL_HYPERPARAMS = {
         "n_jobs": -1,
     },
     "xgboost": {
+        "objective": "binary:logistic",   # Must be explicit for sklearn ≥1.6 tag system
         "n_estimators": 300,
         "max_depth": 6,
         "learning_rate": 0.05,
