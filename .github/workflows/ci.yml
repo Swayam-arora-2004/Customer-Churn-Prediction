@@ -17,7 +17,7 @@ jobs:
           python-version: "3.11"
           cache: pip
       - name: Install lint tools
-        run: pip install black flake8 pylint
+        run: pip install black==23.7.0 flake8==6.1.0 pylint
       - name: Check formatting (black)
         run: black --check src/ app/ tests/
       - name: Lint (flake8)
