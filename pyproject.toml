@@ -1,0 +1,47 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "customer-churn-prediction"
+version = "1.0.0"
+description = "FAANG-ready end-to-end Customer Churn Prediction & Prevention System"
+authors = [{ name = "Swayam Arora" }]
+requires-python = ">=3.11"
+readme = "README.md"
+license = { text = "MIT" }
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*", "app*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short --cov=src --cov=app --cov-report=term-missing"
+
+[tool.black]
+line-length = 88
+target-version = ["py311"]
+include = '\.pyi?$'
+
+[tool.flake8]
+max-line-length = 88
+extend-ignore = ["E203", "W503"]
+exclude = ["churn-prediction", ".git", "__pycache__", "dist", "build"]
+
+[tool.pylint.main]
+ignore = ["churn-prediction", "dist", "build"]
+
+[tool.pylint.format]
+max-line-length = 88
+
+[tool.coverage.run]
+source = ["src", "app"]
+omit = ["tests/*", "churn-prediction/*", "*/site-packages/*"]
+
+[tool.coverage.report]
+show_missing = true
+fail_under = 80

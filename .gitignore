@@ -1,0 +1,73 @@
+# Virtual environments
+churn-prediction/
+venv/
+.venv/
+env/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+*.egg
+.eggs/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# ML artifacts
+models/*.pkl
+models/*.joblib
+models/*.model
+mlruns/
+mlartifacts/
+
+# Data (keep structure, exclude large files)
+data/processed/*.csv
+data/processed/*.parquet
+data/raw/*.csv
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+
+# Figures (generated at runtime)
+figures/*.png
+figures/*.jpg
+figures/*.svg
+!figures/.gitkeep
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+
+# Logs
+*.log
+logs/
+
+# SQLite
+*.db
+*.sqlite3

@@ -1,0 +1,96 @@
+version: "3.9"
+
+services:
+  # ── Flask REST API ─────────────────────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    image: churn-prediction-api:latest
+    container_name: churn_api
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./models:/app/models
+      - ./data:/app/data
+      - ./figures:/app/figures
+      - ./logs:/app/logs
+    environment:
+      - API_HOST=0.0.0.0
+      - API_PORT=5000
+      - API_DEBUG=false
+      - MLFLOW_TRACKING_URI=http://mlflow:5001
+      - LOG_LEVEL=INFO
+      - LOG_FORMAT=json
+    env_file:
+      - .env
+    depends_on:
+      - mlflow
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  # ── Streamlit Dashboard ───────────────────────────────────────────────────
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    image: churn-prediction-dashboard:latest
+    container_name: churn_dashboard
+    command: >
+      streamlit run app/dashboard.py
+      --server.port=8501
+      --server.address=0.0.0.0
+      --server.headless=true
+      --browser.gatherUsageStats=false
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./models:/app/models
+      - ./data:/app/data
+      - ./figures:/app/figures
+      - ./logs:/app/logs
+    environment:
+      - MLFLOW_TRACKING_URI=http://mlflow:5001
+    env_file:
+      - .env
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  # ── MLflow Tracking Server ────────────────────────────────────────────────
+  mlflow:
+    image: python:3.11-slim
+    container_name: churn_mlflow
+    command: >
+      bash -c "pip install mlflow --quiet &&
+               mlflow server
+               --host 0.0.0.0
+               --port 5001
+               --backend-store-uri /mlruns
+               --default-artifact-root /mlruns"
+    ports:
+      - "5001:5001"
+    volumes:
+      - mlflow_data:/mlruns
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+volumes:
+  mlflow_data:
+    driver: local
+
+networks:
+  default:
+    name: churn_network
