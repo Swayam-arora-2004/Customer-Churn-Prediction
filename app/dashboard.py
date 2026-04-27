@@ -266,7 +266,7 @@ if "Single" in page:
         X = preprocessor.transform(raw_df)
         prob = float(model.predict_proba(X)[0, 1])
         will_churn = prob >= 0.5
-        
+
         # Ensure SQLite target exists and append audit trail
         try:
             _init_db()
