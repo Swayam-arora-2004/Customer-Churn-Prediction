@@ -5,11 +5,6 @@ Unit + integration tests for src/model_training.py and src/explainability.py.
 ─────────────────────────────────────────────────────────────────────────────
 """
 
-import json
-import tempfile
-from pathlib import Path
-from unittest.mock import MagicMock, patch
-
 import numpy as np
 import pandas as pd
 import pytest
@@ -59,6 +54,7 @@ class TestModelTrainer:
     def test_apply_smote_balances_classes(self, synthetic_data):
         """SMOTE should produce an approximately balanced dataset."""
         from src.model_training import ModelTrainer
+
         X, y = synthetic_data
         # Force imbalance
         minority_idx = y[y == 1].index[:20]
@@ -73,17 +69,20 @@ class TestModelTrainer:
 
     def test_load_best_model_raises_when_missing(self, tmp_path):
         from src.model_training import ModelTrainer
+
         with pytest.raises(FileNotFoundError):
             ModelTrainer.load_best_model(tmp_path / "nonexistent.pkl")
 
     def test_load_metadata_returns_empty_when_missing(self, tmp_path):
         from src.model_training import ModelTrainer
+
         result = ModelTrainer.load_metadata(tmp_path / "metadata.json")
         assert result == {}
 
     def test_save_and_load_model(self, trained_rf, tmp_path):
         import joblib
         from src.model_training import ModelTrainer
+
         model, X, y = trained_rf
         model_path = tmp_path / "model.pkl"
         joblib.dump(model, model_path)
@@ -128,6 +127,7 @@ class TestPredictions:
 class TestModelEvaluator:
     def test_evaluate_returns_all_metrics(self, trained_rf, tmp_path):
         from src.evaluation import ModelEvaluator
+
         model, X, y = trained_rf
         evaluator = ModelEvaluator(figures_dir=tmp_path)
         metrics = evaluator.evaluate(model, X, y, save_plots=False)
@@ -139,6 +139,7 @@ class TestModelEvaluator:
 
     def test_roc_auc_between_0_and_1(self, trained_rf, tmp_path):
         from src.evaluation import ModelEvaluator
+
         model, X, y = trained_rf
         evaluator = ModelEvaluator(figures_dir=tmp_path)
         metrics = evaluator.evaluate(model, X, y, save_plots=False)
@@ -146,7 +147,7 @@ class TestModelEvaluator:
 
     def test_roc_curve_plot_saved(self, trained_rf, tmp_path):
         from src.evaluation import ModelEvaluator
-        import numpy as np
+
         model, X, y = trained_rf
         evaluator = ModelEvaluator(figures_dir=tmp_path)
         y_proba = model.predict_proba(X)[:, 1]
@@ -155,6 +156,7 @@ class TestModelEvaluator:
 
     def test_confusion_matrix_plot_saved(self, trained_rf, tmp_path):
         from src.evaluation import ModelEvaluator
+
         model, X, y = trained_rf
         evaluator = ModelEvaluator(figures_dir=tmp_path)
         y_pred = model.predict(X)
@@ -163,6 +165,7 @@ class TestModelEvaluator:
 
     def test_feature_importance_plot_saved(self, trained_rf, tmp_path):
         from src.evaluation import ModelEvaluator
+
         model, X, y = trained_rf
         evaluator = ModelEvaluator(figures_dir=tmp_path)
         path = evaluator.plot_feature_importance(
@@ -177,6 +180,7 @@ class TestModelEvaluator:
 class TestSHAPExplainer:
     def test_explain_instance_structure(self, trained_rf):
         from src.explainability import SHAPExplainer
+
         model, X, y = trained_rf
         explainer = SHAPExplainer(model, X)
         explanation = explainer.explain_instance(X.iloc[[0]])
@@ -186,6 +190,7 @@ class TestSHAPExplainer:
 
     def test_churn_probability_in_range(self, trained_rf):
         from src.explainability import SHAPExplainer
+
         model, X, y = trained_rf
         explainer = SHAPExplainer(model, X)
         for i in range(min(5, len(X))):
@@ -195,6 +200,7 @@ class TestSHAPExplainer:
 
     def test_top_drivers_has_required_keys(self, trained_rf):
         from src.explainability import SHAPExplainer
+
         model, X, y = trained_rf
         explainer = SHAPExplainer(model, X)
         exp = explainer.explain_instance(X.iloc[[0]])
@@ -207,6 +213,7 @@ class TestSHAPExplainer:
     def test_lr_explainer_works(self, trained_lr):
         """LinearExplainer path should work for LogisticRegression."""
         from src.explainability import SHAPExplainer
+
         model, X, y = trained_lr
         explainer = SHAPExplainer(model, X)
         exp = explainer.explain_instance(X.iloc[[0]])
@@ -214,6 +221,7 @@ class TestSHAPExplainer:
 
     def test_top_n_respected(self, trained_rf):
         from src.explainability import SHAPExplainer
+
         model, X, y = trained_rf
         explainer = SHAPExplainer(model, X)
         exp = explainer.explain_instance(X.iloc[[0]], top_n=3)

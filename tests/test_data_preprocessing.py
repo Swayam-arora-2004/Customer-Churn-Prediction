@@ -8,7 +8,6 @@ Run with:
 ─────────────────────────────────────────────────────────────────────────────
 """
 
-import json
 import tempfile
 from pathlib import Path
 
@@ -36,13 +35,33 @@ def minimal_raw_df() -> pd.DataFrame:
             "PhoneService": ["No", "Yes", "Yes", "Yes"],
             "MultipleLines": ["No phone service", "No", "Yes", "Yes"],
             "InternetService": ["DSL", "Fiber optic", "DSL", "DSL"],
-            "OnlineSecurity": ["No", "Yes", "No internet service", "No internet service"],
+            "OnlineSecurity": [
+                "No",
+                "Yes",
+                "No internet service",
+                "No internet service",
+            ],
             "OnlineBackup": ["Yes", "No", "No internet service", "No internet service"],
-            "DeviceProtection": ["No", "Yes", "No internet service", "No internet service"],
+            "DeviceProtection": [
+                "No",
+                "Yes",
+                "No internet service",
+                "No internet service",
+            ],
             "TechSupport": ["No", "No", "No internet service", "No internet service"],
             "StreamingTV": ["No", "Yes", "No internet service", "No internet service"],
-            "StreamingMovies": ["No", "Yes", "No internet service", "No internet service"],
-            "Contract": ["Month-to-month", "One year", "Month-to-month", "Month-to-month"],
+            "StreamingMovies": [
+                "No",
+                "Yes",
+                "No internet service",
+                "No internet service",
+            ],
+            "Contract": [
+                "Month-to-month",
+                "One year",
+                "Month-to-month",
+                "Month-to-month",
+            ],
             "PaperlessBilling": ["Yes", "No", "Yes", "Yes"],
             "PaymentMethod": [
                 "Electronic check",
@@ -61,6 +80,7 @@ def minimal_raw_df() -> pd.DataFrame:
 def preprocessor():
     """Return a fresh DataPreprocessor instance."""
     from src.data_preprocessing import DataPreprocessor
+
     return DataPreprocessor(test_size=0.5, random_state=42)
 
 
@@ -163,6 +183,7 @@ class TestScale:
 
     def test_scale_transform_fails_without_fit(self, preprocessor, encoded_df):
         from src.data_preprocessing import DataPreprocessor
+
         fresh = DataPreprocessor()
         X = encoded_df.drop(columns=["Churn"])
         with pytest.raises(RuntimeError, match="Scaler has not been fitted"):
@@ -189,6 +210,7 @@ class TestSaveLoad:
             assert path.exists()
 
             from src.data_preprocessing import DataPreprocessor
+
             loaded = DataPreprocessor.load(path)
             assert loaded.is_fitted
             assert loaded.scaler_type == preprocessor.scaler_type
@@ -201,6 +223,7 @@ class TestSaveLoad:
 
     def test_load_fails_bad_path(self):
         from src.data_preprocessing import DataPreprocessor
+
         with pytest.raises(FileNotFoundError):
             DataPreprocessor.load(Path("/nonexistent/preprocessor.pkl"))
 
@@ -216,35 +239,44 @@ class TestTransform:
         # Build a synthetic 100-row raw dataset with balanced Churn classes
         n = 100
         rng = np.random.default_rng(42)
-        choices = lambda opts, k: rng.choice(opts, k).tolist()
 
-        synthetic = pd.DataFrame({
-            "customerID": [f"S{i:03d}" for i in range(n)],
-            "gender": choices(["Male", "Female"], n),
-            "SeniorCitizen": choices([0, 1], n),
-            "Partner": choices(["Yes", "No"], n),
-            "Dependents": choices(["Yes", "No"], n),
-            "tenure": rng.integers(0, 72, n).tolist(),
-            "PhoneService": choices(["Yes", "No"], n),
-            "MultipleLines": choices(["Yes", "No", "No phone service"], n),
-            "InternetService": choices(["DSL", "Fiber optic", "No"], n),
-            "OnlineSecurity": choices(["Yes", "No", "No internet service"], n),
-            "OnlineBackup": choices(["Yes", "No", "No internet service"], n),
-            "DeviceProtection": choices(["Yes", "No", "No internet service"], n),
-            "TechSupport": choices(["Yes", "No", "No internet service"], n),
-            "StreamingTV": choices(["Yes", "No", "No internet service"], n),
-            "StreamingMovies": choices(["Yes", "No", "No internet service"], n),
-            "Contract": choices(["Month-to-month", "One year", "Two year"], n),
-            "PaperlessBilling": choices(["Yes", "No"], n),
-            "PaymentMethod": choices(
-                ["Electronic check", "Mailed check",
-                 "Bank transfer (automatic)", "Credit card (automatic)"], n
-            ),
-            "MonthlyCharges": rng.uniform(20, 110, n).round(2).tolist(),
-            "TotalCharges": [str(round(v, 2)) for v in rng.uniform(20, 8000, n)],
-            # Guarantee ≥10 of each class for stratified split
-            "Churn": (["Yes"] * 50 + ["No"] * 50),
-        })
+        def choices(opts, k):
+            return rng.choice(opts, k).tolist()
+
+        synthetic = pd.DataFrame(
+            {
+                "customerID": [f"S{i:03d}" for i in range(n)],
+                "gender": choices(["Male", "Female"], n),
+                "SeniorCitizen": choices([0, 1], n),
+                "Partner": choices(["Yes", "No"], n),
+                "Dependents": choices(["Yes", "No"], n),
+                "tenure": rng.integers(0, 72, n).tolist(),
+                "PhoneService": choices(["Yes", "No"], n),
+                "MultipleLines": choices(["Yes", "No", "No phone service"], n),
+                "InternetService": choices(["DSL", "Fiber optic", "No"], n),
+                "OnlineSecurity": choices(["Yes", "No", "No internet service"], n),
+                "OnlineBackup": choices(["Yes", "No", "No internet service"], n),
+                "DeviceProtection": choices(["Yes", "No", "No internet service"], n),
+                "TechSupport": choices(["Yes", "No", "No internet service"], n),
+                "StreamingTV": choices(["Yes", "No", "No internet service"], n),
+                "StreamingMovies": choices(["Yes", "No", "No internet service"], n),
+                "Contract": choices(["Month-to-month", "One year", "Two year"], n),
+                "PaperlessBilling": choices(["Yes", "No"], n),
+                "PaymentMethod": choices(
+                    [
+                        "Electronic check",
+                        "Mailed check",
+                        "Bank transfer (automatic)",
+                        "Credit card (automatic)",
+                    ],
+                    n,
+                ),
+                "MonthlyCharges": rng.uniform(20, 110, n).round(2).tolist(),
+                "TotalCharges": [str(round(v, 2)) for v in rng.uniform(20, 8000, n)],
+                # Guarantee ≥10 of each class for stratified split
+                "Churn": (["Yes"] * 50 + ["No"] * 50),
+            }
+        )
 
         with tempfile.TemporaryDirectory() as tmpdir:
             import src.config as cfg
@@ -295,12 +327,14 @@ class TestFeatureEngineer:
 
     def test_avg_monthly_charges_created(self, encoded_no_churn):
         from src.feature_engineering import FeatureEngineer
+
         fe = FeatureEngineer()
         result = fe.transform(encoded_no_churn)
         assert "avg_monthly_charges" in result.columns
 
     def test_avg_monthly_charges_formula(self, encoded_no_churn):
         from src.feature_engineering import FeatureEngineer
+
         fe = FeatureEngineer()
         result = fe.transform(encoded_no_churn)
         expected = encoded_no_churn["TotalCharges"] / (encoded_no_churn["tenure"] + 1)
@@ -312,24 +346,28 @@ class TestFeatureEngineer:
 
     def test_service_count_non_negative(self, encoded_no_churn):
         from src.feature_engineering import FeatureEngineer
+
         fe = FeatureEngineer()
         result = fe.transform(encoded_no_churn)
         assert (result["service_count"] >= 0).all()
 
     def test_service_count_max_7(self, encoded_no_churn):
         from src.feature_engineering import FeatureEngineer
+
         fe = FeatureEngineer()
         result = fe.transform(encoded_no_churn)
         assert (result["service_count"] <= 7).all()
 
     def test_has_premium_services_is_binary(self, encoded_no_churn):
         from src.feature_engineering import FeatureEngineer
+
         fe = FeatureEngineer()
         result = fe.transform(encoded_no_churn)
         assert set(result["has_premium_services"].unique()).issubset({0, 1})
 
     def test_tenure_group_columns_created(self, encoded_no_churn):
         from src.feature_engineering import FeatureEngineer
+
         fe = FeatureEngineer()
         result = fe.transform(encoded_no_churn)
         tenure_group_cols = [c for c in result.columns if c.startswith("tenure_group_")]
@@ -337,6 +375,7 @@ class TestFeatureEngineer:
 
     def test_no_string_columns_after_fe(self, encoded_no_churn):
         from src.feature_engineering import FeatureEngineer
+
         fe = FeatureEngineer()
         result = fe.transform(encoded_no_churn)
         string_cols = result.select_dtypes(include="object").columns.tolist()
@@ -344,6 +383,7 @@ class TestFeatureEngineer:
 
     def test_original_columns_preserved(self, encoded_no_churn):
         from src.feature_engineering import FeatureEngineer
+
         fe = FeatureEngineer()
         result = fe.transform(encoded_no_churn)
         for col in ["tenure", "MonthlyCharges", "TotalCharges"]:
@@ -352,6 +392,7 @@ class TestFeatureEngineer:
 
     def test_disabled_features_not_created(self, encoded_no_churn):
         from src.feature_engineering import FeatureEngineer
+
         fe = FeatureEngineer(
             create_avg_monthly_charges=False,
             create_service_count=False,

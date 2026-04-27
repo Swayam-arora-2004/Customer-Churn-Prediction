@@ -15,19 +15,19 @@ test:
 # Run linters and formatters manually
 lint:
 	black src/ app/ tests/
-	flake8 src/ app/ tests/
+	flake8 src/ app/ tests/ --max-line-length=88 --extend-ignore=E203,E402,E501
 
 # Build the complete production Docker stack
 build:
-	docker-compose build
+	docker compose build
 
 # Run the production Docker stack detached
 run:
-	docker-compose up -d
+	docker compose up -d
 
 # Spin down the Docker stack
 down:
-	docker-compose down
+	docker compose down
 
 # Force run the exact CI pipeline validation locally
 ci-validate: lint test build
