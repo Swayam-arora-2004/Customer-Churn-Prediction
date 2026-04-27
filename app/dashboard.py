@@ -119,10 +119,10 @@ def load_artefacts():
 
 
 @st.cache_resource(show_spinner="Initialising SHAP explainer …")
-def load_explainer(model):
+def load_explainer(_model):
     try:
         X_train = pd.read_csv(PROCESSED_X_TRAIN_PATH).sample(100, random_state=42)
-        return SHAPExplainer(model, X_train)
+        return SHAPExplainer(_model, X_train)
     except Exception as e:
         return None
 
@@ -610,7 +610,7 @@ elif "Monitor" in page:
 
     # ── API Health Check ──────────────────────────────────────────────────────
     st.subheader("API Health Check")
-    api_url = st.text_input("API Base URL", value="http://localhost:5000")
+    api_url = st.text_input("API Base URL", value="http://localhost:8000")
     if st.button("🔍 Check Health"):
         try:
             import requests

@@ -259,5 +259,28 @@ class ModelEvaluator:
         path = self.figures_dir / "feature_importance.png"
         fig.savefig(path, dpi=150, bbox_inches="tight")
         plt.close(fig)
-        logger.info("Feature importance saved → %s", path)
         return path
+
+
+# ── Entry point ───────────────────────────────────────────────────────────────
+
+def generate_plots():
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
+    
+    try:
+        from src.model_training import ModelTrainer
+        from src.config import BEST_MODEL_PATH
+        
+        logger.info("Loading model and data for evaluation…")
+        model = ModelTrainer.load_best_model(BEST_MODEL_PATH)
+        trainer = ModelTrainer(use_smote=False)  # just using it for load_data
+        _, X_test, _, y_test = trainer.load_data()
+        
+        evaluator = ModelEvaluator()
+        evaluator.evaluate(model, X_test, y_test, model_name="Best Model", save_plots=True)
+        logger.info("All performance plots generated successfully!")
+    except Exception as e:
+        logger.error(f"Evaluation failed: {e}")
+
+if __name__ == "__main__":
+    generate_plots()
