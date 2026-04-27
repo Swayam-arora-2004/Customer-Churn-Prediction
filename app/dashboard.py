@@ -15,13 +15,9 @@ Run:
 ─────────────────────────────────────────────────────────────────────────────
 """
 
-import io
-import json
-import os
 import sys
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -33,15 +29,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from src.config import (
     BEST_MODEL_PATH,
     FIGURES_DIR,
-    MODEL_METADATA_PATH,
     PREPROCESSOR_PATH,
     PROCESSED_X_TRAIN_PATH,
-    PREVENTION,
 )
 from src.data_preprocessing import DataPreprocessor
 from src.explainability import SHAPExplainer
 from src.model_training import ModelTrainer
 from src.prevention import RetentionEngine
+from app.app import _log_prediction, _init_db
 
 # ── Page config ───────────────────────────────────────────────────────────────
 
@@ -107,6 +102,7 @@ html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
 
 # ── Cached resource loaders ───────────────────────────────────────────────────
 
+
 @st.cache_resource(show_spinner="Loading model artefacts …")
 def load_artefacts():
     try:
@@ -123,7 +119,7 @@ def load_explainer(_model):
     try:
         X_train = pd.read_csv(PROCESSED_X_TRAIN_PATH).sample(100, random_state=42)
         return SHAPExplainer(_model, X_train)
-    except Exception as e:
+    except Exception:
         return None
 
 
@@ -169,7 +165,9 @@ with st.sidebar:
 
 if "Single" in page:
     st.title("🔍 Customer Churn Prediction")
-    st.caption("Enter customer details to get a real-time churn probability, explanation, and retention plan.")
+    st.caption(
+        "Enter customer details to get a real-time churn probability, explanation, and retention plan."
+    )
 
     if not model:
         st.error("Model artefacts not found. Please run the training pipeline first.")
@@ -184,7 +182,9 @@ if "Single" in page:
             st.markdown("**Demographics & Account**")
             customer_id = st.text_input("Customer ID (optional)", value="CUST-001")
             gender = st.selectbox("Gender", ["Male", "Female"])
-            senior = st.selectbox("Senior Citizen", [0, 1], format_func=lambda x: "Yes" if x else "No")
+            senior = st.selectbox(
+                "Senior Citizen", [0, 1], format_func=lambda x: "Yes" if x else "No"
+            )
             partner = st.selectbox("Partner", ["Yes", "No"])
             dependents = st.selectbox("Dependents", ["Yes", "No"])
             tenure = st.slider("Tenure (months)", 0, 72, 12)
@@ -192,18 +192,34 @@ if "Single" in page:
         with col2:
             st.markdown("**Services**")
             phone = st.selectbox("Phone Service", ["Yes", "No"])
-            multi_lines = st.selectbox("Multiple Lines", ["Yes", "No", "No phone service"])
+            multi_lines = st.selectbox(
+                "Multiple Lines", ["Yes", "No", "No phone service"]
+            )
             internet = st.selectbox("Internet Service", ["DSL", "Fiber optic", "No"])
-            online_sec = st.selectbox("Online Security", ["Yes", "No", "No internet service"])
-            online_bak = st.selectbox("Online Backup", ["Yes", "No", "No internet service"])
-            dev_prot = st.selectbox("Device Protection", ["Yes", "No", "No internet service"])
-            tech_sup = st.selectbox("Tech Support", ["Yes", "No", "No internet service"])
-            stream_tv = st.selectbox("Streaming TV", ["Yes", "No", "No internet service"])
-            stream_mov = st.selectbox("Streaming Movies", ["Yes", "No", "No internet service"])
+            online_sec = st.selectbox(
+                "Online Security", ["Yes", "No", "No internet service"]
+            )
+            online_bak = st.selectbox(
+                "Online Backup", ["Yes", "No", "No internet service"]
+            )
+            dev_prot = st.selectbox(
+                "Device Protection", ["Yes", "No", "No internet service"]
+            )
+            tech_sup = st.selectbox(
+                "Tech Support", ["Yes", "No", "No internet service"]
+            )
+            stream_tv = st.selectbox(
+                "Streaming TV", ["Yes", "No", "No internet service"]
+            )
+            stream_mov = st.selectbox(
+                "Streaming Movies", ["Yes", "No", "No internet service"]
+            )
 
         with col3:
             st.markdown("**Billing**")
-            contract = st.selectbox("Contract", ["Month-to-month", "One year", "Two year"])
+            contract = st.selectbox(
+                "Contract", ["Month-to-month", "One year", "Two year"]
+            )
             paperless = st.selectbox("Paperless Billing", ["Yes", "No"])
             payment = st.selectbox(
                 "Payment Method",
@@ -215,31 +231,67 @@ if "Single" in page:
                 ],
             )
             monthly = st.number_input("Monthly Charges ($)", 0.0, 200.0, 65.0, 0.01)
-            total = st.number_input("Total Charges ($)", 0.0, 10000.0, float(monthly * max(1, tenure)), 0.01)
+            total = st.number_input(
+                "Total Charges ($)", 0.0, 10000.0, float(monthly * max(1, tenure)), 0.01
+            )
 
-        submitted = st.form_submit_button("🚀 Predict Churn", type="primary", use_container_width=True)
+        submitted = st.form_submit_button(
+            "🚀 Predict Churn", type="primary", use_container_width=True
+        )
 
     # ── Prediction ────────────────────────────────────────────────────────────
     if submitted:
         raw_input = {
-            "gender": gender, "SeniorCitizen": senior, "Partner": partner,
-            "Dependents": dependents, "tenure": tenure, "PhoneService": phone,
-            "MultipleLines": multi_lines, "InternetService": internet,
-            "OnlineSecurity": online_sec, "OnlineBackup": online_bak,
-            "DeviceProtection": dev_prot, "TechSupport": tech_sup,
-            "StreamingTV": stream_tv, "StreamingMovies": stream_mov,
-            "Contract": contract, "PaperlessBilling": paperless,
-            "PaymentMethod": payment, "MonthlyCharges": monthly,
+            "gender": gender,
+            "SeniorCitizen": senior,
+            "Partner": partner,
+            "Dependents": dependents,
+            "tenure": tenure,
+            "PhoneService": phone,
+            "MultipleLines": multi_lines,
+            "InternetService": internet,
+            "OnlineSecurity": online_sec,
+            "OnlineBackup": online_bak,
+            "DeviceProtection": dev_prot,
+            "TechSupport": tech_sup,
+            "StreamingTV": stream_tv,
+            "StreamingMovies": stream_mov,
+            "Contract": contract,
+            "PaperlessBilling": paperless,
+            "PaymentMethod": payment,
+            "MonthlyCharges": monthly,
             "TotalCharges": total,
         }
         raw_df = pd.DataFrame([raw_input])
         X = preprocessor.transform(raw_df)
         prob = float(model.predict_proba(X)[0, 1])
+        will_churn = prob >= 0.5
+        
+        # Ensure SQLite target exists and append audit trail
+        try:
+            _init_db()
+            _log_prediction(customer_id, prob, will_churn, raw_input)
+        except Exception as e:
+            st.warning(f"Could not write to audit log: {e}")
 
         # ── Results header ────────────────────────────────────────────────────
-        seg = ("High Risk" if prob >= 0.70 else "Medium Risk" if prob >= 0.30 else "Low Risk")
-        badge_cls = {"High Risk": "badge-high", "Medium Risk": "badge-medium", "Low Risk": "badge-low"}[seg]
-        badge_colour = {"High Risk": "#E74C3C", "Medium Risk": "#F39C12", "Low Risk": "#2ECC71"}[seg]
+        seg = (
+            "High Risk"
+            if prob >= 0.70
+            else "Medium Risk"
+            if prob >= 0.30
+            else "Low Risk"
+        )
+        badge_cls = {
+            "High Risk": "badge-high",
+            "Medium Risk": "badge-medium",
+            "Low Risk": "badge-low",
+        }[seg]
+        badge_colour = {
+            "High Risk": "#E74C3C",
+            "Medium Risk": "#F39C12",
+            "Low Risk": "#2ECC71",
+        }[seg]
 
         st.divider()
         m1, m2, m3, m4 = st.columns(4)
@@ -312,8 +364,10 @@ if "Single" in page:
         with col_a:
             for rec in recs["recommendations"]:
                 priority_colour = {
-                    "critical": "#E74C3C", "high": "#F39C12",
-                    "medium": "#3498DB", "low": "#95A5A6"
+                    "critical": "#E74C3C",
+                    "high": "#F39C12",
+                    "medium": "#3498DB",
+                    "low": "#95A5A6",
                 }.get(rec["priority"], "#aaa")
                 st.markdown(
                     f"""
@@ -362,33 +416,51 @@ elif "Batch" in page:
                 df_raw = df_raw.head(1000)
 
             with st.spinner("Running predictions …"):
-                customer_ids = df_raw.get("customerID", pd.Series(range(len(df_raw)))).astype(str)
+                customer_ids = df_raw.get(
+                    "customerID", pd.Series(range(len(df_raw)))
+                ).astype(str)
                 df_clean = df_raw.drop(columns=["customerID"], errors="ignore")
                 X = preprocessor.transform(df_clean)
                 probas = model.predict_proba(X)[:, 1]
 
-            df_results = pd.DataFrame({
-                "Customer ID": customer_ids,
-                "Churn Probability": probas.round(4),
-                "Will Churn": (probas >= 0.5),
-                "Risk Segment": [
-                    "High Risk" if p >= 0.70 else "Medium Risk" if p >= 0.30 else "Low Risk"
-                    for p in probas
-                ],
-            })
+            df_results = pd.DataFrame(
+                {
+                    "Customer ID": customer_ids,
+                    "Churn Probability": probas.round(4),
+                    "Will Churn": (probas >= 0.5),
+                    "Risk Segment": [
+                        "High Risk"
+                        if p >= 0.70
+                        else "Medium Risk"
+                        if p >= 0.30
+                        else "Low Risk"
+                        for p in probas
+                    ],
+                }
+            )
 
             # ── Summary metrics ───────────────────────────────────────────────
             st.divider()
             r1, r2, r3, r4 = st.columns(4)
             r1.metric("Total Customers", f"{len(df_results):,}")
-            r2.metric("High Risk", f"{(df_results['Risk Segment'] == 'High Risk').sum():,}",
-                      delta_color="inverse")
-            r3.metric("Medium Risk", f"{(df_results['Risk Segment'] == 'Medium Risk').sum():,}")
-            r4.metric("Low Risk", f"{(df_results['Risk Segment'] == 'Low Risk').sum():,}")
+            r2.metric(
+                "High Risk",
+                f"{(df_results['Risk Segment'] == 'High Risk').sum():,}",
+                delta_color="inverse",
+            )
+            r3.metric(
+                "Medium Risk",
+                f"{(df_results['Risk Segment'] == 'Medium Risk').sum():,}",
+            )
+            r4.metric(
+                "Low Risk", f"{(df_results['Risk Segment'] == 'Low Risk').sum():,}"
+            )
 
             # ── Distribution chart ────────────────────────────────────────────
             fig_hist = px.histogram(
-                df_results, x="Churn Probability", nbins=40,
+                df_results,
+                x="Churn Probability",
+                nbins=40,
                 color_discrete_sequence=["#3498DB"],
                 title="Churn Probability Distribution",
             )
@@ -430,6 +502,7 @@ elif "Batch" in page:
         # Show sample from raw dataset
         try:
             from src.config import RAW_DATA_PATH
+
             sample = pd.read_csv(RAW_DATA_PATH).head(5)
             st.caption("Sample data (first 5 rows of raw dataset):")
             st.dataframe(sample, use_container_width=True)
@@ -450,22 +523,33 @@ elif "Segments" in page:
 
     try:
         from src.config import RAW_DATA_PATH
+
         df_raw = pd.read_csv(RAW_DATA_PATH).drop(columns=["Churn"], errors="ignore")
-        customer_ids = df_raw["customerID"].copy() if "customerID" in df_raw.columns else pd.Series(range(len(df_raw)))
+        customer_ids = (
+            df_raw["customerID"].copy()
+            if "customerID" in df_raw.columns
+            else pd.Series(range(len(df_raw)))
+        )
         df_input = df_raw.drop(columns=["customerID"], errors="ignore")
 
         with st.spinner("Running predictions on full dataset …"):
             X_all = preprocessor.transform(df_input)
             probas = model.predict_proba(X_all)[:, 1]
 
-        df_seg = pd.DataFrame({
-            "Customer ID": customer_ids.values,
-            "Churn Probability": probas.round(4),
-            "Risk Segment": [
-                "High Risk" if p >= 0.70 else "Medium Risk" if p >= 0.30 else "Low Risk"
-                for p in probas
-            ],
-        })
+        df_seg = pd.DataFrame(
+            {
+                "Customer ID": customer_ids.values,
+                "Churn Probability": probas.round(4),
+                "Risk Segment": [
+                    "High Risk"
+                    if p >= 0.70
+                    else "Medium Risk"
+                    if p >= 0.30
+                    else "Low Risk"
+                    for p in probas
+                ],
+            }
+        )
 
         # ── KPIs ─────────────────────────────────────────────────────────────
         seg_counts = df_seg["Risk Segment"].value_counts()
@@ -497,7 +581,9 @@ elif "Segments" in page:
         with col_right:
             # Box plot
             fig_box = px.box(
-                df_seg, x="Risk Segment", y="Churn Probability",
+                df_seg,
+                x="Risk Segment",
+                y="Churn Probability",
                 color="Risk Segment",
                 color_discrete_map={
                     "High Risk": "#E74C3C",
@@ -507,16 +593,19 @@ elif "Segments" in page:
                 title="Probability Distribution by Segment",
             )
             fig_box.update_layout(
-                plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(0,0,0,0)",
+                paper_bgcolor="rgba(0,0,0,0)",
                 showlegend=False,
             )
             st.plotly_chart(fig_box, use_container_width=True)
 
         # High-risk table
         st.subheader("🔴 Top High-Risk Customers")
-        high_risk_df = df_seg[df_seg["Risk Segment"] == "High Risk"].sort_values(
-            "Churn Probability", ascending=False
-        ).head(20)
+        high_risk_df = (
+            df_seg[df_seg["Risk Segment"] == "High Risk"]
+            .sort_values("Churn Probability", ascending=False)
+            .head(20)
+        )
         st.dataframe(high_risk_df, use_container_width=True)
 
     except Exception as e:
@@ -547,7 +636,9 @@ elif "Insights" in page:
             for col, path in zip(cols, plots_available):
                 col.image(str(path), use_column_width=True)
         else:
-            st.info("Performance plots not yet generated. Run the evaluation notebook first.")
+            st.info(
+                "Performance plots not yet generated. Run the evaluation notebook first."
+            )
 
     with tabs[1]:
         fi_path = FIGURES_DIR / "feature_importance.png"
@@ -557,17 +648,24 @@ elif "Insights" in page:
             try:
                 feature_names = preprocessor.feature_names_
                 importances = model.feature_importances_
-                fi_df = pd.DataFrame(
-                    {"Feature": feature_names, "Importance": importances}
-                ).sort_values("Importance", ascending=False).head(20)
+                fi_df = (
+                    pd.DataFrame({"Feature": feature_names, "Importance": importances})
+                    .sort_values("Importance", ascending=False)
+                    .head(20)
+                )
 
                 fig_fi = px.bar(
-                    fi_df, x="Importance", y="Feature", orientation="h",
+                    fi_df,
+                    x="Importance",
+                    y="Feature",
+                    orientation="h",
                     title="Feature Importances (Top 20)",
-                    color="Importance", color_continuous_scale="RdYlGn",
+                    color="Importance",
+                    color_continuous_scale="RdYlGn",
                 )
                 fig_fi.update_layout(
-                    plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+                    plot_bgcolor="rgba(0,0,0,0)",
+                    paper_bgcolor="rgba(0,0,0,0)",
                     yaxis=dict(autorange="reversed"),
                     height=500,
                 )
@@ -596,7 +694,9 @@ elif "Monitor" in page:
     st.subheader("Model Metadata")
     if metadata:
         mc1, mc2, mc3, mc4 = st.columns(4)
-        mc1.metric("Algorithm", metadata.get("model_name", "—").replace("_", " ").title())
+        mc1.metric(
+            "Algorithm", metadata.get("model_name", "—").replace("_", " ").title()
+        )
         mc2.metric("ROC-AUC", f"{metadata.get('test_roc_auc', 0):.4f}")
         mc3.metric("F1 Score", f"{metadata.get('test_f1', 0):.4f}")
         mc4.metric("Features", metadata.get("feature_count", "—"))
@@ -614,6 +714,7 @@ elif "Monitor" in page:
     if st.button("🔍 Check Health"):
         try:
             import requests
+
             resp = requests.get(f"{api_url}/v1/health", timeout=5)
             if resp.ok:
                 st.success(f"API is healthy | Status: {resp.status_code}")
@@ -628,8 +729,10 @@ elif "Monitor" in page:
     # ── Audit Log ─────────────────────────────────────────────────────────────
     st.subheader("Recent Predictions (Audit Log)")
     from src.config import AUDIT_DB_PATH
+
     try:
         import sqlite3
+
         if AUDIT_DB_PATH.exists():
             conn = sqlite3.connect(AUDIT_DB_PATH)
             df_audit = pd.read_sql(
