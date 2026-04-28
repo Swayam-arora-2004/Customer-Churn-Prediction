@@ -31,6 +31,8 @@ build/
 # models/*.pkl
 models/*.joblib
 models/*.model
+models/registry/v*/
+!models/registry/.gitkeep
 mlruns/
 mlartifacts/
 
@@ -40,6 +42,8 @@ data/processed/*.parquet
 data/raw/*.csv
 !data/raw/.gitkeep
 !data/processed/.gitkeep
+data/pool/*.csv
+!data/pool/.gitkeep
 
 # Figures (generated at runtime)
 figures/*.png
@@ -66,8 +70,12 @@ coverage.xml
 
 # Logs
 *.log
-logs/
+logs/*.db
+logs/*.json
+!logs/.gitkeep
 
 # SQLite
-*.db
 *.sqlite3
+
+# CatBoost cache
+catboost_info/

@@ -22,12 +22,21 @@ ROOT_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT_DIR / "data"
 RAW_DATA_DIR = DATA_DIR / "raw"
 PROCESSED_DATA_DIR = DATA_DIR / "processed"
+DATA_POOL_DIR = DATA_DIR / "pool"
 MODELS_DIR = ROOT_DIR / "models"
+MODEL_REGISTRY_DIR = MODELS_DIR / "registry"
 FIGURES_DIR = ROOT_DIR / "figures"
 LOGS_DIR = ROOT_DIR / "logs"
 
 # Ensure directories exist at import time
-for _dir in [PROCESSED_DATA_DIR, MODELS_DIR, FIGURES_DIR, LOGS_DIR]:
+for _dir in [
+    PROCESSED_DATA_DIR,
+    DATA_POOL_DIR,
+    MODELS_DIR,
+    MODEL_REGISTRY_DIR,
+    FIGURES_DIR,
+    LOGS_DIR,
+]:
     _dir.mkdir(parents=True, exist_ok=True)
 
 # ── File Paths ────────────────────────────────────────────────────────────────
@@ -44,6 +53,8 @@ PREPROCESSOR_PATH = Path(
 )
 FEATURE_NAMES_PATH = MODELS_DIR / "feature_names.json"
 MODEL_METADATA_PATH = MODELS_DIR / "model_metadata.json"
+REGISTRY_INDEX_PATH = MODEL_REGISTRY_DIR / "registry.json"
+INGESTION_LOG_PATH = LOGS_DIR / "ingestion_log.json"
 
 AUDIT_DB_PATH = ROOT_DIR / "logs" / "predictions.db"
 
@@ -227,4 +238,11 @@ MONITORING = {
         os.getenv("CHURN_SCORE_ALERT_THRESHOLD", 0.70)
     ),
     "reference_data_path": str(PROCESSED_X_TRAIN_PATH),
+}
+
+# ── Retraining Config ────────────────────────────────────────────────────────
+RETRAINING = {
+    "min_improvement_margin": 0.005,  # new model must beat current AUC by 0.5%
+    "min_samples_for_retrain": 500,  # minimum rows in pool to trigger retrain
+    "auto_promote": True,  # auto-promote if new model is better
 }
