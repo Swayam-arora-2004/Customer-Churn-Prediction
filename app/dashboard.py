@@ -122,6 +122,7 @@ def load_artefacts():
 
 @st.cache_resource(show_spinner="Initialising SHAP explainer …")
 def load_explainer(_model):
+    """Lazy-loaded: only called when SHAP is actually needed."""
     try:
         X_train = pd.read_csv(PROCESSED_X_TRAIN_PATH).sample(100, random_state=42)
         return SHAPExplainer(_model, X_train)
@@ -129,10 +130,33 @@ def load_explainer(_model):
         return None
 
 
-# ── Load artefacts ────────────────────────────────────────────────────────────
+@st.cache_data(show_spinner="Running predictions on full dataset …", ttl=3600)
+def compute_risk_segments(_preprocessor, _model, data_path: str):
+    """Cache full-dataset predictions so Risk Segments page is instant."""
+    df_raw = pd.read_csv(data_path).drop(columns=["Churn"], errors="ignore")
+    customer_ids = (
+        df_raw["customerID"].copy()
+        if "customerID" in df_raw.columns
+        else pd.Series(range(len(df_raw)))
+    )
+    df_input = df_raw.drop(columns=["customerID"], errors="ignore")
+    X_all = _preprocessor.transform(df_input)
+    probas = _model.predict_proba(X_all)[:, 1]
+    return pd.DataFrame(
+        {
+            "Customer ID": customer_ids.values,
+            "Churn Probability": probas.round(4),
+            "Risk Segment": [
+                "High Risk" if p >= 0.70 else "Medium Risk" if p >= 0.30 else "Low Risk"
+                for p in probas
+            ],
+        }
+    )
+
+
+# ── Load artefacts (model + preprocessor only — fast) ─────────────────────────
 
 model, preprocessor, metadata, load_error = load_artefacts()
-shap_explainer = load_explainer(model) if model else None
 retention_engine = RetentionEngine()
 
 # ── Sidebar navigation ────────────────────────────────────────────────────────
@@ -328,39 +352,41 @@ if "Single" in page:
 
         # ── SHAP explanation ──────────────────────────────────────────────────
         shap_drivers = []
-        if shap_explainer:
-            st.subheader("🧠 Why this prediction?")
-            exp = shap_explainer.explain_instance(X)
-            shap_drivers = exp.get("top_drivers", [])
+        if st.checkbox("Show SHAP explanation", value=True):
+            shap_explainer = load_explainer(model) if model else None
+            if shap_explainer:
+                st.subheader("🧠 Why this prediction?")
+                exp = shap_explainer.explain_instance(X)
+                shap_drivers = exp.get("top_drivers", [])
 
-            shap_df = pd.DataFrame(shap_drivers)
-            shap_df["color"] = shap_df["shap_value"].apply(
-                lambda v: "#E74C3C" if v > 0 else "#2ECC71"
-            )
-            shap_df = shap_df.sort_values("shap_value")
-
-            fig = go.Figure(
-                go.Bar(
-                    x=shap_df["shap_value"],
-                    y=shap_df["feature"],
-                    orientation="h",
-                    marker_color=shap_df["color"].tolist(),
-                    text=[f"{v:+.4f}" for v in shap_df["shap_value"]],
-                    textposition="outside",
+                shap_df = pd.DataFrame(shap_drivers)
+                shap_df["color"] = shap_df["shap_value"].apply(
+                    lambda v: "#E74C3C" if v > 0 else "#2ECC71"
                 )
-            )
-            fig.update_layout(
-                title="SHAP Feature Contributions",
-                xaxis_title="SHAP Value (impact on churn probability)",
-                height=400,
-                margin=dict(l=0, r=60, t=40, b=0),
-                plot_bgcolor="rgba(0,0,0,0)",
-                paper_bgcolor="rgba(0,0,0,0)",
-                xaxis=dict(gridcolor="rgba(255,255,255,0.1)"),
-            )
-            st.plotly_chart(fig, use_container_width=True)
-        else:
-            st.info("SHAP explainer not available — train the model first.")
+                shap_df = shap_df.sort_values("shap_value")
+
+                fig = go.Figure(
+                    go.Bar(
+                        x=shap_df["shap_value"],
+                        y=shap_df["feature"],
+                        orientation="h",
+                        marker_color=shap_df["color"].tolist(),
+                        text=[f"{v:+.4f}" for v in shap_df["shap_value"]],
+                        textposition="outside",
+                    )
+                )
+                fig.update_layout(
+                    title="SHAP Feature Contributions",
+                    xaxis_title="SHAP Value (impact on churn probability)",
+                    height=400,
+                    margin=dict(l=0, r=60, t=40, b=0),
+                    plot_bgcolor="rgba(0,0,0,0)",
+                    paper_bgcolor="rgba(0,0,0,0)",
+                    xaxis=dict(gridcolor="rgba(255,255,255,0.1)"),
+                )
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.info("SHAP explainer not available — train the model first.")
 
         # ── Retention recommendations ─────────────────────────────────────────
         st.subheader("🛡️ Retention Action Plan")
@@ -531,32 +557,7 @@ elif "Segments" in page:
     try:
         from src.config import RAW_DATA_PATH
 
-        df_raw = pd.read_csv(RAW_DATA_PATH).drop(columns=["Churn"], errors="ignore")
-        customer_ids = (
-            df_raw["customerID"].copy()
-            if "customerID" in df_raw.columns
-            else pd.Series(range(len(df_raw)))
-        )
-        df_input = df_raw.drop(columns=["customerID"], errors="ignore")
-
-        with st.spinner("Running predictions on full dataset …"):
-            X_all = preprocessor.transform(df_input)
-            probas = model.predict_proba(X_all)[:, 1]
-
-        df_seg = pd.DataFrame(
-            {
-                "Customer ID": customer_ids.values,
-                "Churn Probability": probas.round(4),
-                "Risk Segment": [
-                    "High Risk"
-                    if p >= 0.70
-                    else "Medium Risk"
-                    if p >= 0.30
-                    else "Low Risk"
-                    for p in probas
-                ],
-            }
-        )
+        df_seg = compute_risk_segments(preprocessor, model, str(RAW_DATA_PATH))
 
         # ── KPIs ─────────────────────────────────────────────────────────────
         seg_counts = df_seg["Risk Segment"].value_counts()
