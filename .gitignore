@@ -45,8 +45,9 @@ data/raw/*.csv
 data/pool/*.csv
 !data/pool/.gitkeep
 
-# Figures (generated at runtime)
-figures/*.png
+# Figures
+# Keep .png files so baseline performance plots show on Cloud
+# figures/*.png
 figures/*.jpg
 figures/*.svg
 !figures/.gitkeep

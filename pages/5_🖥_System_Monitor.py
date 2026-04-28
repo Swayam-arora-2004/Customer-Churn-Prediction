@@ -31,7 +31,8 @@ st.divider()
 
 # ── API Health Check ──────────────────────────────────────────────────────────
 st.subheader("API Health Check")
-api_url = st.text_input("API Base URL", value="http://localhost:8000")
+st.caption("Note: The Flask API runs as a separate process on port 5000 (via Docker or `python app/app.py`).")
+api_url = st.text_input("API Base URL", value="http://localhost:5000")
 if st.button("🔍 Check Health"):
     try:
         import requests

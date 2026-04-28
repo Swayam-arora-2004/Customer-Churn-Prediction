@@ -142,7 +142,7 @@ with tabs[1]:
 
                 preprocessor = DataPreprocessor()
                 X_train, X_test, y_train, y_test = preprocessor.fit_transform_split(
-                    raw_path=tmp_csv, save=False
+                    raw_path=tmp_csv, save=True
                 )
                 tmp_csv.unlink(missing_ok=True)
 
