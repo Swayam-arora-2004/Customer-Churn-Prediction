@@ -23,8 +23,14 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import joblib
-import mlflow
-import mlflow.sklearn
+
+try:
+    import mlflow
+    import mlflow.sklearn
+
+    _HAS_MLFLOW = True
+except Exception:
+    _HAS_MLFLOW = False
 import numpy as np
 import pandas as pd
 from catboost import CatBoostClassifier
@@ -105,8 +111,9 @@ class ModelTrainer:
         self.best_model: Optional[Any] = None
 
         # Configure MLflow
-        mlflow.set_tracking_uri(MLFLOW["tracking_uri"])
-        mlflow.set_experiment(MLFLOW["experiment_name"])
+        if _HAS_MLFLOW:
+            mlflow.set_tracking_uri(MLFLOW["tracking_uri"])
+            mlflow.set_experiment(MLFLOW["experiment_name"])
 
         logger.info(
             "ModelTrainer initialised | use_smote=%s cv_folds=%d scoring=%s",
@@ -238,24 +245,29 @@ class ModelTrainer:
         feature_names = X_train.columns.tolist()
 
         for name, model in models.items():
-            with mlflow.start_run(
-                run_name=name,
-                tags=MLFLOW.get("run_tags", {}),
-            ):
-                # Log model params
-                mlflow.log_params(MODEL_HYPERPARAMS.get(name, {}))
-                mlflow.log_param("use_smote", self.use_smote)
-                mlflow.log_param("cv_folds", TRAINING["cv_folds"])
+            _mlflow_ctx = (
+                mlflow.start_run(run_name=name, tags=MLFLOW.get("run_tags", {}))
+                if _HAS_MLFLOW
+                else None
+            )
+            try:
+                if _mlflow_ctx:
+                    _mlflow_ctx.__enter__()
+                    # Log model params
+                    mlflow.log_params(MODEL_HYPERPARAMS.get(name, {}))
+                    mlflow.log_param("use_smote", self.use_smote)
+                    mlflow.log_param("cv_folds", TRAINING["cv_folds"])
 
                 # Cross-validation
                 t0 = time.time()
                 cv_scores = self.cross_validate_model(name, model, X_smote, y_smote)
                 cv_time = time.time() - t0
 
-                # Log CV metrics
-                for metric, value in cv_scores.items():
-                    mlflow.log_metric(f"cv_{metric}", value)
-                mlflow.log_metric("cv_time_seconds", cv_time)
+                if _HAS_MLFLOW:
+                    # Log CV metrics
+                    for metric, value in cv_scores.items():
+                        mlflow.log_metric(f"cv_{metric}", value)
+                    mlflow.log_metric("cv_time_seconds", cv_time)
 
                 # Full refit on training data
                 t1 = time.time()
@@ -277,11 +289,11 @@ class ModelTrainer:
                         average_precision_score(y_test, y_pred_proba)
                     ),
                 }
-                mlflow.log_metrics(test_scores)
-                mlflow.log_metric("fit_time_seconds", fit_time)
-
-                # Log model artefact
-                mlflow.sklearn.log_model(model, name)
+                if _HAS_MLFLOW:
+                    mlflow.log_metrics(test_scores)
+                    mlflow.log_metric("fit_time_seconds", fit_time)
+                    # Log model artefact
+                    mlflow.sklearn.log_model(model, name)
 
                 self.results[name] = {
                     "cv": cv_scores,
@@ -290,6 +302,9 @@ class ModelTrainer:
                     "cv_time": cv_time,
                     "fit_time": fit_time,
                 }
+            finally:
+                if _mlflow_ctx:
+                    _mlflow_ctx.__exit__(None, None, None)
                 logger.info(
                     "%s | Test AUC=%.4f F1=%.4f",
                     name,
