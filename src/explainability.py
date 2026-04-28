@@ -138,7 +138,7 @@ class SHAPExplainer:
 
         top_drivers = [
             {
-                "feature": self.feature_names[i],
+                "feature": self.feature_names[int(i)],
                 "value": float(feature_vals[i]),
                 "shap_value": float(row_shap[i]),
                 "direction": (
