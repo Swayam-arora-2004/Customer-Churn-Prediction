@@ -36,7 +36,13 @@ from src.data_preprocessing import DataPreprocessor
 from src.explainability import SHAPExplainer
 from src.model_training import ModelTrainer
 from src.prevention import RetentionEngine
-from app.app import _log_prediction, _init_db
+
+try:
+    from app.app import _log_prediction, _init_db
+
+    _HAS_FLASK_APP = True
+except Exception:
+    _HAS_FLASK_APP = False
 
 # ── Page config ───────────────────────────────────────────────────────────────
 
@@ -268,11 +274,12 @@ if "Single" in page:
         will_churn = prob >= 0.5
 
         # Ensure SQLite target exists and append audit trail
-        try:
-            _init_db()
-            _log_prediction(customer_id, prob, will_churn, raw_input)
-        except Exception as e:
-            st.warning(f"Could not write to audit log: {e}")
+        if _HAS_FLASK_APP:
+            try:
+                _init_db()
+                _log_prediction(customer_id, prob, will_churn, raw_input)
+            except Exception as e:
+                st.warning(f"Could not write to audit log: {e}")
 
         # ── Results header ────────────────────────────────────────────────────
         seg = (

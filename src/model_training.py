@@ -33,8 +33,19 @@ except Exception:
     _HAS_MLFLOW = False
 import numpy as np
 import pandas as pd
-from catboost import CatBoostClassifier
-from imblearn.over_sampling import SMOTE
+
+try:
+    from catboost import CatBoostClassifier
+
+    _HAS_CATBOOST = True
+except ImportError:
+    _HAS_CATBOOST = False
+try:
+    from imblearn.over_sampling import SMOTE
+
+    _HAS_IMBLEARN = True
+except ImportError:
+    _HAS_IMBLEARN = False
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.base import clone
@@ -69,14 +80,16 @@ logger = logging.getLogger(__name__)
 
 def _build_models() -> Dict[str, Any]:
     """Instantiate all classifiers from config hyperparameters."""
-    return {
+    models = {
         "logistic_regression": LogisticRegression(
             **MODEL_HYPERPARAMS["logistic_regression"]
         ),
         "random_forest": RandomForestClassifier(**MODEL_HYPERPARAMS["random_forest"]),
         "xgboost": XGBClassifier(**MODEL_HYPERPARAMS["xgboost"]),
-        "catboost": CatBoostClassifier(**MODEL_HYPERPARAMS["catboost"]),
     }
+    if _HAS_CATBOOST:
+        models["catboost"] = CatBoostClassifier(**MODEL_HYPERPARAMS["catboost"])
+    return models
 
 
 # ── Main Trainer Class ────────────────────────────────────────────────────────
@@ -147,6 +160,9 @@ class ModelTrainer:
         self, X_train: pd.DataFrame, y_train: pd.Series
     ) -> Tuple[pd.DataFrame, pd.Series]:
         """Oversample the minority class using SMOTE."""
+        if not _HAS_IMBLEARN:
+            logger.warning("imbalanced-learn not installed — skipping SMOTE")
+            return X_train, y_train
         smote = SMOTE(random_state=TRAINING["smote_random_state"])
         X_res, y_res = smote.fit_resample(X_train, y_train)
         logger.info(
