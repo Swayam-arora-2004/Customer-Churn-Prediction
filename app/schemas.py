@@ -116,7 +116,7 @@ class HealthResponse(BaseModel):
     trained_at: str
     uptime_seconds: float
     version: str
-    
+
     model_config = {"protected_namespaces": ()}
 
 
@@ -127,7 +127,7 @@ class MetricsResponse(BaseModel):
     test_precision: float
     test_recall: float
     trained_at: str
-    
+
     model_config = {"protected_namespaces": ()}
 
 
