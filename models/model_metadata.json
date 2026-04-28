@@ -2,10 +2,10 @@
   "model_name": "xgboost",
   "model_class": "XGBClassifier",
   "feature_count": 26,
-  "test_roc_auc": 0.8315936982793617,
-  "test_f1": 0.6248715313463515,
-  "test_precision": 0.5058236272878536,
-  "test_recall": 0.8172043010752689,
-  "trained_at": "2026-04-27T13:39:18.362458+00:00",
+  "test_roc_auc": 0.8309092943613445,
+  "test_f1": 0.6206185567010308,
+  "test_precision": 0.5033444816053512,
+  "test_recall": 0.8091397849462365,
+  "trained_at": "2026-04-28T06:14:21.885939+00:00",
   "use_smote": true
 }

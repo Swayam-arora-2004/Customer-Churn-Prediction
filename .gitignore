@@ -28,7 +28,7 @@ build/
 !.env.example
 
 # ML artifacts
-models/*.pkl
+# models/*.pkl
 models/*.joblib
 models/*.model
 mlruns/
