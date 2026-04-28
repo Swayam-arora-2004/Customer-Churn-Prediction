@@ -130,11 +130,20 @@ class SHAPExplainer:
             else self._explainer.expected_value
         )
 
-        row_shap = shap_values[0] if shap_values.ndim == 2 else shap_values
+        # Handle various SHAP output shapes (1D, 2D, or 3D)
+        if shap_values.ndim == 3:
+            # (n_samples, n_features, n_classes) -> take class 1
+            row_shap = shap_values[0, :, 1]
+        elif shap_values.ndim == 2:
+            # (n_samples, n_features)
+            row_shap = shap_values[0]
+        else:
+            row_shap = shap_values
+
         feature_vals = X.iloc[0].values if hasattr(X, "iloc") else X[0]
 
-        # Sort by absolute SHAP value
-        indices = np.argsort(np.abs(row_shap))[::-1][:top_n]
+        # Sort by absolute SHAP value and ensure 1D indices
+        indices = np.argsort(np.abs(row_shap)).flatten()[::-1][:top_n]
 
         top_drivers = [
             {
