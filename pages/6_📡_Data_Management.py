@@ -124,42 +124,34 @@ with tabs[1]:
             try:
                 from src.data_ingestion import DataIngestionService as DIS3
                 from src.data_preprocessing import DataPreprocessor
-                from src.model_training import ModelTrainer
                 from src.model_registry import ModelRegistry
-                from src.config import (
-                    PREPROCESSOR_PATH,
-                    BEST_MODEL_PATH,
-                    TARGET_COLUMN,
-                )
-                from sklearn.model_selection import train_test_split
+                from src.config import RETRAINING
                 from sklearn.metrics import roc_auc_score, f1_score
 
-                # 1. Load all pooled data
+                # 1. Load all pooled data and save as temp CSV for preprocessor
                 ingest = DIS3()
                 df_all = ingest.get_training_data(include_raw=True)
                 st.write(f"📦 Loaded {len(df_all):,} rows for training")
 
-                # 2. Preprocess
+                # 2. Use the standard preprocessing pipeline
+                import tempfile
+                from pathlib import Path
+
+                tmp_csv = Path(tempfile.mktemp(suffix=".csv"))
+                df_all.to_csv(tmp_csv, index=False)
+
                 preprocessor = DataPreprocessor()
-                df_clean = preprocessor.clean(df_all)
-                df_encoded = preprocessor.encode(df_clean)
+                X_train, X_test, y_train, y_test = preprocessor.fit_transform_split(
+                    raw_path=tmp_csv, save=False
+                )
+                tmp_csv.unlink(missing_ok=True)
 
-                from src.feature_engineering import FeatureEngineer
-
-                fe = FeatureEngineer()
-                df_features = fe.transform(df_encoded)
-
-                y = df_features[TARGET_COLUMN]
-                X = df_features.drop(columns=[TARGET_COLUMN])
-
-                preprocessor.fit_scaler(X)
-                X_scaled = preprocessor.scale(X)
-
-                X_train, X_test, y_train, y_test = train_test_split(
-                    X_scaled, y, test_size=0.2, random_state=42, stratify=y
+                st.write(
+                    f"🔧 Preprocessed → {X_train.shape[0]:,} train / "
+                    f"{X_test.shape[0]:,} test / {X_train.shape[1]} features"
                 )
 
-                # 3. Train best model (XGBoost only for speed on cloud)
+                # 3. Train XGBoost (fastest for cloud retraining)
                 from xgboost import XGBClassifier
                 from src.config import MODEL_HYPERPARAMS
 
@@ -176,8 +168,8 @@ with tabs[1]:
 
                 dataset_info = {
                     "rows": len(df_all),
-                    "features": X_scaled.shape[1],
-                    "churn_rate": round(float(y.mean()), 4),
+                    "features": X_train.shape[1],
+                    "churn_rate": round(float(y_train.mean()), 4),
                 }
 
                 # 4. Register in model registry

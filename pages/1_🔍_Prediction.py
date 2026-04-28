@@ -8,7 +8,6 @@ from app.shared import (
     CUSTOM_CSS,
     get_model,
     get_preprocessor,
-    get_metadata,
     get_retention_engine,
     get_shap_explainer,
 )
