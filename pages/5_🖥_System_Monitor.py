@@ -43,8 +43,12 @@ if st.button("🔍 Check Health"):
             st.json(resp.json())
         else:
             st.error(f"API returned {resp.status_code}")
-    except Exception as e:
-        st.warning(f"API unreachable: {e}")
+    except requests.exceptions.RequestException:
+        st.warning(
+            "API unreachable. The backend Flask server is not running on this URL.\n\n"
+            "If you are on Streamlit Cloud, this is expected (only the frontend runs). "
+            "To test the API locally, run `python app/app.py` or use Docker."
+        )
 
 st.divider()
 
